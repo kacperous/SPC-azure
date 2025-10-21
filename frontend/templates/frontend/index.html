@@ -1,0 +1,83 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Django App</title>
+    <link rel="stylesheet" href="{% static 'frontend/css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">{{ title }}</h1>
+            <div class="animated-line"></div>
+        </header>
+
+        <main class="content">
+            <div class="card">
+                <div class="icon">🚀</div>
+                <h2>{{ message }}</h2>
+                <p class="description">{{ description }}</p>
+                
+                <div class="tech-stack">
+                    <span class="badge">Django</span>
+                    <span class="badge">HTML</span>
+                    <span class="badge">CSS</span>
+                    <span class="badge">JavaScript</span>
+                    <span class="badge">REST API</span>
+                </div>
+
+                <button id="interactiveBtn" class="btn">Kliknij mnie!</button>
+                <div id="clickCounter" class="counter">Kliknięcia: 0</div>
+            </div>
+
+            <div class="card api-card">
+                <h3>🔌 API Integration</h3>
+                <p>Frontend komunikuje się z API w module 'user'</p>
+                <button id="fetchDataBtn" class="btn btn-secondary">Pobierz dane z API</button>
+                <div id="apiResponse" class="api-response"></div>
+            </div>
+
+            <div class="info-section">
+                <h3>🎨 Architektura projektu</h3>
+                <div class="architecture">
+                    <div class="arch-box">
+                        <h4>📱 Frontend (ten moduł)</h4>
+                        <p>Odpowiada za interfejs użytkownika</p>
+                        <ul>
+                            <li>HTML Templates</li>
+                            <li>CSS Styling</li>
+                            <li>JavaScript (komunikacja z API)</li>
+                        </ul>
+                    </div>
+                    <div class="arch-arrow">→</div>
+                    <div class="arch-box">
+                        <h4>🔧 User API</h4>
+                        <p>Wystawia REST API endpoints</p>
+                        <ul>
+                            <li>Django REST Framework</li>
+                            <li>Logika biznesowa</li>
+                            <li>Zarządzanie danymi</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>🎨 Opcje Frontend w Django</h3>
+                <ul>
+                    <li>✅ <strong>Django Templates</strong> - tradycyjny sposób (to co widzisz)</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Stworzone z ❤️ używając Django Framework</p>
+            <p class="tech-note">Frontend module + User API module</p>
+        </footer>
+    </div>
+
+    <script src="{% static 'frontend/js/script.js' %}"></script>
+</body>
+</html>
