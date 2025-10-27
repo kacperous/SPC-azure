@@ -14,7 +14,9 @@ services:
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
     volumes:
-      - ./user/migrations:/app/user/migrations
+      - ./user/migrations:/app/users/migrations
+      - ./files/migrations:/app/files/migrations
+      - ./logs/migrations:/app/logs/migrations
     depends_on:
       db_spc:
         condition: service_healthy
