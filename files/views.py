@@ -8,17 +8,14 @@ from rest_framework.decorators import action
 from django.shortcuts import redirect
 
 class UserFileViewSet(viewsets.ModelViewSet):
-    """
-    To jest magiczny "Kierownik", który robi WSZYSTKO:
-    - GET (listuje pliki)
-    - POST (dodaje plik)
-    - DELETE (usuwa plik)
-    """
+  
     serializer_class = UserFileSerializer
 
-    # TA LINIA TO BEZPIECZEŃSTWO:
-    # Użytkownik widzi TYLKO swoje pliki.
+    # admin widzi wszystko , zwykły użytkownik tylko swoje pliki
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            return UserFile.objects.all().order_by('-uploaded_at')
+        
         return UserFile.objects.filter(owner=self.request.user).order_by('-uploaded_at')
 
     # To jest Twoja "logika dodawania" (wywoływana przy POST)
@@ -44,13 +41,9 @@ class UserFileViewSet(viewsets.ModelViewSet):
             details=f"Wgrano plik: {user_file.original_filename}"
         )
 
-    # To jest Twoja "logika usuwania" (wywoływana przy DELETE)
     def perform_destroy(self, instance):
-        # Zapisujemy nazwę pliku, zanim go usuniemy
         file_name = instance.original_filename
         
-        # Ta linia usuwa wpis z bazy (PostgreSQL)
-        # i automatycznie usuwa plik fizyczny (z dysku lokalnie lub z Azure)
         instance.delete() 
         
         # Zapisz log w LogBooku

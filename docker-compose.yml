@@ -14,10 +14,10 @@ services:
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
       - AZURE_ACCOUNT_NAME=${AZURE_ACCOUNT_NAME}
-      - REMOVED_AZURE_ACCOUNT_KEY=${REMOVED_AZURE_ACCOUNT_KEY}
+      - AZURE_ACCOUNT_KEY=${AZURE_ACCOUNT_KEY}
       - AZURE_CONTAINER=${AZURE_CONTAINER}
     volumes:
-      - ./user/migrations:/app/users/migrations
+      - ./users/migrations:/app/users/migrations
       - ./files/migrations:/app/files/migrations
       - ./logs/migrations:/app/logs/migrations
     depends_on:

@@ -3,26 +3,17 @@ from django.conf import settings
 import os
 
 def user_directory_path(instance, filename):
-    """
-    Funkcja pomocnicza: tworzy ścieżkę zapisu pliku w formacie:
-    'user_uploads/ID_UZYTKOWNIKA/oryginalna_nazwa_pliku'
-    """
     return f'user_uploads/{instance.owner.id}/{filename}'
 
 class UserFile(models.Model):
-    """
-    Model reprezentujący plik przesłany do chmury przez użytkownika.
-    """
+ 
     
-    # Kluczowe powiązanie z domyślnym modelem User.
-    # Realizuje wymaganie "dostęp do własnych plików".
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='files'
     )
-    
-    # Właściwy plik (trafia do Azure Blob Storage)
+
     file = models.FileField(upload_to=user_directory_path)
     
     # --- Pola dla "Przeglądania listy plików" ---

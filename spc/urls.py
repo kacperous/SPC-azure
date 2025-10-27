@@ -2,8 +2,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
-
-# Importy dla logowania
+from drf_spectacular.views import SpectacularSwaggerView
 from users.views import CustomTokenObtainPairView
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -13,16 +12,14 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # --- Adresy API (Mózg) ---
+    path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Podłączamy wszystkie adresy z 'files' pod '/api/'
     path('api/', include('files.urls')),
-    
-    # --- Adresy Aplikacji (Twarz) ---
-    # Podłączamy naszą główną stronę
+    path('api/', include('logs.urls')),
+
     path('', include('frontend.urls')),
 ]
 

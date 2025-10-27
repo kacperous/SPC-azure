@@ -155,7 +155,7 @@ STORAGES = {
         "OPTIONS": {
             # AUTENTYKACJA
             "account_name": AZURE_ACCOUNT_NAME,
-            "account_key": os.getenv("REMOVED_AZURE_ACCOUNT_KEY"),
+            "account_key": os.getenv("AZURE_ACCOUNT_KEY"),
             
             # WŁAŚCIWE USTAWIENIA AZURE
             "azure_container": AZURE_CONTAINER,
@@ -175,7 +175,7 @@ STORAGES = {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
         "OPTIONS": {
             "account_name": AZURE_ACCOUNT_NAME,
-            "account_key": os.getenv("REMOVED_AZURE_ACCOUNT_KEY"),
+            "account_key": os.getenv("AZURE_ACCOUNT_KEY"),
             "azure_container": "static", # Kontener na pliki statyczne
             # "azure_protocol": 'https',
             "azure_ssl": True,
