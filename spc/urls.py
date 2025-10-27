@@ -26,7 +26,3 @@ urlpatterns = [
     path('', include('frontend.urls')),
 ]
 
-# Ta linia jest potrzebna, aby pliki działały LOKALNIE w Dockerze (w Fazie 1)
-# Serwuje pliki z folderu 'media'
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

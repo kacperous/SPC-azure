@@ -5,8 +5,7 @@ from .models import UserFile
 from .serializers import UserFileSerializer
 from logs.models import ActivityLog # Do logowania działań
 from rest_framework.decorators import action
-from django.http import FileResponse
-import mimetypes
+from django.shortcuts import redirect
 
 class UserFileViewSet(viewsets.ModelViewSet):
     """
@@ -61,34 +60,32 @@ class UserFileViewSet(viewsets.ModelViewSet):
             details=f"Usunięto plik: {file_name}"
         )
         
+    
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         """
-        Specjalna akcja do wymuszonego pobierania pliku
-        i logowania tego faktu.
+        Akcja logująca pobieranie i przekierowująca użytkownika
+        do bezpiecznego linku SAS (Shared Access Signature) w Azure.
         """
-        # 1. Pobierz obiekt pliku (np. /api/files/5/download/)
         user_file = self.get_object() 
         
-        # 2. Zaloguj akcję do LogBooka
+        # 1. Zapisz log do LogBooka (to robimy ZAWSZE na serwerze)
         ActivityLog.objects.create(
             user=self.request.user,
             action=ActivityLog.ActionType.FILE_DOWNLOAD,
-            details=f"Pobrano plik: {user_file.original_filename}"
+            details=f"Wymuszone pobranie pliku: {user_file.original_filename}"
         )
 
-        # 3. Otwórz plik (z dysku lokalnego lub Azure)
-        # 'rb' = read binary (czytaj jako plik binarny)
-        file_handle = user_file.file.open('rb')
-        
-        # 4. Zgadnij typ pliku (np. 'application/pdf')
-        mime_type, _ = mimetypes.guess_type(user_file.original_filename)
+        # 2. Wygeneruj bezpieczny URL z nagłówkiem 'attachment'
+        # To jest kluczowe: to "zmusza" przeglądarkę do POBRANIA,
+        # a nie tylko podglądu, nawet jeśli to PDF.
+        # Wymaga to użycia metody storage.url()
+        download_url = user_file.file.storage.url(
+            user_file.file.name, 
+            # Dodaj ten nagłówek Content-Disposition do URL
+            # To jest "bilet", który wymusza pobranie
+            params={'response-content-disposition': f'attachment; filename="{user_file.original_filename}"'}
+        )
 
-        # 5. Stwórz odpowiedź, która zmusi do pobrania
-        response = FileResponse(file_handle, content_type=mime_type)
-        response['Content-Length'] = user_file.file_size
-        
-        # To jest kluczowy nagłówek, który mówi "pobierz" zamiast "wyświetl"
-        response['Content-Disposition'] = f'attachment; filename="{user_file.original_filename}"'
-        
-        return response
+        # 3. Przekieruj użytkownika do bezpiecznego, tymczasowego linku w Azure
+        return redirect(download_url)
