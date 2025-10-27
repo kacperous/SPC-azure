@@ -1,6 +1,9 @@
+# frontend/urls.py
+
 from django.urls import path
-from . import views
+from .views import FrontendAppView
 
 urlpatterns = [
-    path('', views.index, name='frontend-index'),
+    # Jak ktoś wejdzie na główny adres ('/'), pokaż mu widok 'Twarzy'
+    path('', FrontendAppView.as_view(), name='frontend_app'),
 ]

@@ -1,83 +1,208 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - Django App</title>
-    <link rel="stylesheet" href="{% static 'frontend/css/style.css' %}">
+    <title>Moje Pliki Chmurowe</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; background: #f9f9f9; }
+        h1, h2 { color: #333; }
+        input[type="text"], input[type="password"] { margin-bottom: 10px; padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
+        button, a.button-view { 
+            padding: 8px 12px; cursor: pointer; background: #007bff; color: white; 
+            border: none; border-radius: 4px; text-decoration: none; display: inline-block;
+            margin-left: 5px;
+        }
+        a.button-view { background: #6c757d; }
+        button:hover, a.button-view:hover { opacity: 0.8; }
+        hr { margin: 25px 0; border: 0; border-top: 1px solid #eee; }
+        ul { list-style-type: none; padding: 0; }
+        li { 
+            background: #fff; padding: 15px; margin-bottom: 8px; 
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid #eee; border-radius: 4px;
+        }
+        li span { font-weight: bold; }
+        #app-content { display: none; }
+        #login-section { background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">{{ title }}</h1>
-            <div class="animated-line"></div>
-        </header>
 
-        <main class="content">
-            <div class="card">
-                <div class="icon">🚀</div>
-                <h2>{{ message }}</h2>
-                <p class="description">{{ description }}</p>
-                
-                <div class="tech-stack">
-                    <span class="badge">Django</span>
-                    <span class="badge">HTML</span>
-                    <span class="badge">CSS</span>
-                    <span class="badge">JavaScript</span>
-                    <span class="badge">REST API</span>
-                </div>
+    <h1>System Plików Chmurowych</h1>
 
-                <button id="interactiveBtn" class="btn">Kliknij mnie!</button>
-                <div id="clickCounter" class="counter">Kliknięcia: 0</div>
-            </div>
-
-            <div class="card api-card">
-                <h3>🔌 API Integration</h3>
-                <p>Frontend komunikuje się z API w module 'user'</p>
-                <button id="fetchDataBtn" class="btn btn-secondary">Pobierz dane z API</button>
-                <div id="apiResponse" class="api-response"></div>
-            </div>
-
-            <div class="info-section">
-                <h3>🎨 Architektura projektu</h3>
-                <div class="architecture">
-                    <div class="arch-box">
-                        <h4>📱 Frontend (ten moduł)</h4>
-                        <p>Odpowiada za interfejs użytkownika</p>
-                        <ul>
-                            <li>HTML Templates</li>
-                            <li>CSS Styling</li>
-                            <li>JavaScript (komunikacja z API)</li>
-                        </ul>
-                    </div>
-                    <div class="arch-arrow">→</div>
-                    <div class="arch-box">
-                        <h4>🔧 User API</h4>
-                        <p>Wystawia REST API endpoints</p>
-                        <ul>
-                            <li>Django REST Framework</li>
-                            <li>Logika biznesowa</li>
-                            <li>Zarządzanie danymi</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-section">
-                <h3>🎨 Opcje Frontend w Django</h3>
-                <ul>
-                    <li>✅ <strong>Django Templates</strong> - tradycyjny sposób (to co widzisz)</li>
-                </ul>
-            </div>
-        </main>
-
-        <footer class="footer">
-            <p>Stworzone z ❤️ używając Django Framework</p>
-            <p class="tech-note">Frontend module + User API module</p>
-        </footer>
+    <div id="login-section">
+        <h2>Logowanie</h2>
+        <input type="text" id="username" placeholder="Login (np. admin)">
+        <input type="password" id="password" placeholder="Hasło (np. admin123)">
+        <button onclick="login()">Zaloguj</button>
+        <p id="login-error" style="color: red;"></p>
     </div>
 
-    <script src="{% static 'frontend/js/script.js' %}"></script>
+    <div id="app-content">
+        <hr>
+        <h2>Moje Pliki</h2>
+        <ul id="file-list">
+            </ul>
+        <p id="no-files" style="display: none;">Nie masz jeszcze żadnych plików.</p>
+
+        <hr>
+
+        <h2>Wgraj nowy plik</h2>
+        <input type="file" id="file-input">
+        <button onclick="uploadFile()">Wgraj</button>
+        <p id="upload-status" style="color: green;"></p>
+    </div>
+
+
+    <script>
+        let accessToken = null;
+
+        // --- 1. LOGIKA LOGOWANIA ---
+        async function login() {
+            let username = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+            let loginError = document.getElementById('login-error');
+            loginError.innerText = '';
+
+            try {
+                let response = await fetch('/api/token/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    let data = await response.json();
+                    accessToken = data.access; 
+                    
+                    document.getElementById('app-content').style.display = 'block';
+                    document.getElementById('login-section').style.display = 'none';
+                    
+                    loadFiles(); 
+                } else {
+                    loginError.innerText = 'Błędny login lub hasło!';
+                }
+            } catch (err) {
+                loginError.innerText = 'Błąd połączenia z serwerem.';
+            }
+        }
+
+        // --- 2. LOGIKA POKAZYWANIA PLIKÓW ---
+        async function loadFiles() {
+            if (!accessToken) return; 
+
+            let response = await fetch('/api/files/', {
+                method: 'GET',
+                headers: {'Authorization': `Bearer ${accessToken}`}
+            });
+
+            let files = await response.json();
+            let list = document.getElementById('file-list');
+            let noFilesMsg = document.getElementById('no-files');
+            list.innerHTML = ''; 
+
+            if (files.length === 0) {
+                noFilesMsg.style.display = 'block';
+            } else {
+                noFilesMsg.style.display = 'none';
+                files.forEach(file => {
+                    list.innerHTML += `
+                        <li>
+                            <span>${file.original_filename} (${(file.file_size / 1024).toFixed(1)} KB)</span>
+                            <div>
+                                <a href="${file.file_url}" target="_blank" class="button-view">Zobacz</a>
+                                <button onclick="downloadFile(${file.id}, '${file.original_filename}')">Pobierz</button>
+                                <button onclick="deleteFile(${file.id})" style="background: #dc3545;">Usuń</button>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+        }
+
+        // --- 3. LOGIKA DODAWANIA PLIKU ---
+        async function uploadFile() {
+            if (!accessToken) return;
+
+            let fileInput = document.getElementById('file-input');
+            let file = fileInput.files[0];
+            let uploadStatus = document.getElementById('upload-status');
+            uploadStatus.innerText = '';
+
+            if (!file) {
+                alert('Najpierw wybierz plik!');
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('file', file); 
+
+            uploadStatus.innerText = 'Wgrywanie...';
+            
+            let response = await fetch('/api/files/', {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${accessToken}`},
+                body: formData
+            });
+
+            if (response.ok) {
+                uploadStatus.innerText = 'Plik wgrany!';
+                fileInput.value = ''; 
+                loadFiles(); 
+            } else {
+                uploadStatus.innerText = 'Błąd wgrywania pliku!';
+            }
+        }
+
+        // --- 4. LOGIKA USUWANIA PLIKU ---
+        async function deleteFile(fileId) {
+            if (!accessToken) return;
+            if (!confirm('Czy na pewno usunąć ten plik?')) return;
+            
+            let response = await fetch(`/api/files/${fileId}/`, {
+                method: 'DELETE',
+                headers: {'Authorization': `Bearer ${accessToken}`}
+            });
+
+            if (response.status === 204) { 
+                alert('Plik usunięty!');
+                loadFiles(); 
+            } else {
+                alert('Błąd usuwania pliku!');
+            }
+        }
+
+        // --- 5. LOGIKA POBIERANIA PLIKU ---
+        async function downloadFile(fileId, filename) {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`/api/files/${fileId}/download/`, {
+                    headers: {'Authorization': `Bearer ${accessToken}`}
+                });
+
+                if (!response.ok) {
+                    alert('Błąd pobierania pliku!');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename; 
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+            } catch (err) {
+                console.error('Błąd pobierania:', err);
+                alert('Wystąpił błąd podczas pobierania pliku.');
+            }
+        }
+    </script>
 </body>
 </html>

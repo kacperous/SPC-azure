@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os 
 
 load_dotenv()
@@ -35,14 +36,32 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'drf_spectacular',
     'rest_framework',
-    'user',
+    'rest_framework_simplejwt', 
+
+    'users',
+    'files',
+    'logs',
     'frontend',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', 
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -67,7 +86,8 @@ ROOT_URLCONF = 'spc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # 'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,11 +100,16 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'spc.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+
+# settings.py
+
+DB_HOST = os.getenv('POSTGRES_HOST', 'db_spc') 
 
 DATABASES = {
     'default': {
@@ -92,10 +117,17 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB'),
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': 'db_spc',  
-        'PORT': '5432',     
+        'HOST': DB_HOST, 
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),     
+        
+        # Usuń 'sslmode', gdy łączysz się z lokalną bazą w Dockerze
+        # Możesz to zrobić warunkowo:
+        'OPTIONS': {
+            'sslmode': 'require' if DB_HOST.endswith('.azure.com') else 'allow'
+        }
     }
 }
+
 
 
 # Password validation
@@ -138,3 +170,11 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+# AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+# AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+# AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

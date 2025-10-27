@@ -1,13 +1,7 @@
-from django.shortcuts import render
-from django.http import HttpResponse
+# frontend/views.py
 
-def index(request):
-    """
-    Main frontend page - Hello World with API integration
-    """
-    context = {
-        'title': 'Hello World',
-        'message': 'Witaj w Django!',
-        'description': 'Frontend w Django komunikuje się z API (user app)'
-    }
-    return render(request, 'frontend/index.html', context)
+from django.views.generic import TemplateView
+
+class FrontendAppView(TemplateView):
+    # Po prostu pokaż ten plik HTML
+    template_name = "frontend/index.html"
