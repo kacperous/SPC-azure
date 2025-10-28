@@ -24,4 +24,3 @@ urlpatterns = [
 
     path('', include('frontend.urls')),
 ]
-

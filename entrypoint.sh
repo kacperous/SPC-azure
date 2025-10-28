@@ -7,6 +7,7 @@ while ! pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER -d $POSTGRES_DB; 
     sleep 1
 done
 echo "PostgreSQL started"
+
 echo "Running migrations..."
 
 python manage.py makemigrations
