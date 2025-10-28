@@ -2,6 +2,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import os 
+# Usuwamy import django, bo jest zbędny
 
 load_dotenv()
 
@@ -11,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- ŚRODOWISKO I BEZPIECZEŃSTWO ---
 
 SECRET_KEY = os.getenv("BACKEND_SECRET_KEY")
-DEBUG = os.environ.get('DEBUG', 'True') == 'True' # Używamy zmiennej środowiskowej
+DEBUG = os.environ.get('DEBUG', 'True') == 'True' 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
@@ -27,7 +28,7 @@ INSTALLED_APPS = [
 
     # Zewnętrzne pakiety
     'rest_framework',
-    'corsheaders', # Dla komunikacji React/JS
+    'corsheaders', 
     'storages',  # Azure Storage
     'rest_framework_simplejwt', 
     'drf_spectacular',
@@ -59,7 +60,7 @@ SIMPLE_JWT = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware', # MUSI BYĆ PIERWSZE
+    'corsheaders.middleware.CorsMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,9 +75,9 @@ ROOT_URLCONF = 'spc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # Usuwamy 'os.path.join(BASE_DIR, 'templates')', polegając na APP_DIRS
+        # Usuwamy DIRS, polegamy tylko na APP_DIRS, aby znaleźć frontend/templates/
         'DIRS': [], 
-        'APP_DIRS': True, # To każe szukać w frontend/templates/
+        'APP_DIRS': True, # <<< Klucz do znalezienia szablonów w aplikacjach
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -105,12 +106,12 @@ DATABASES = {
         'HOST': DB_HOST, 
         'PORT': os.getenv('POSTGRES_PORT', '5432'),     
         'OPTIONS': {
-            # Wymagane dla Azure
             'sslmode': 'require' if 'azure.com' in DB_HOST else 'allow' 
         }
     }
 }
 
+# --- OSTATNIE USTAWIENIA Django ---
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -118,16 +119,33 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# --- AZURE & FILE STORAGE KONFIGURACJA ---
+
 AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
 AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
 AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
 
+# URL do plików wgrywanych przez usera (MEDIA - ZAWSZE AZURE)
 MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
-STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
+
+# URL do plików statycznych (STATIC - LOKALNY)
+STATIC_URL = '/static/'
+
+# Folder docelowy dla collectstatic (na serwerze/dockerze)
+STATIC_ROOT = BASE_DIR / 'staticfiles_root' 
+
+# Gdzie szukać plików statycznych w development:
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend' / 'static', # <<< Musisz to mieć, aby frontend/css działał
+]
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder', 
+]
 
 
 STORAGES = {
-    # 1. Główny magazyn dla plików wgrywanych przez użytkowników (MEDIA)
+    # 1. Główny magazyn dla plików wgrywanych przez użytkowników (AZURE BLOB)
     "default": {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
         "OPTIONS": {
@@ -137,18 +155,13 @@ STORAGES = {
             "azure_ssl": True, 
             "expiration_secs": timedelta(hours=1).total_seconds(),
             "overwrite_files": False,
+            # Usunięto 'azure_protocol', by uniknąć błędu ImproperlyConfigured
         },
     },
     
-    # 2. Magazyn dla plików statycznych (STATIC)
+    # 2. Magazyn dla plików statycznych (STATIC - LOKALNY SERWER)
     "staticfiles": {
-        "BACKEND": "storages.backends.azure_storage.AzureStorage",
-        "OPTIONS": {
-            "account_name": AZURE_ACCOUNT_NAME,
-            "account_key": os.getenv("AZURE_ACCOUNT_KEY"),
-            "azure_container": "static", # Kontener na pliki statyczne
-            "azure_ssl": True,
-            "cache_control": "public, max-age=31536000, immutable",
-        }
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        # Usuwamy OPTIONS, bo nie są potrzebne dla lokalnego serwowania plików
     }
 }
