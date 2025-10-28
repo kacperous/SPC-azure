@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'frontend',
 ]
 
+
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     
@@ -95,6 +96,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 
 WSGI_APPLICATION = 'spc.wsgi.application'
@@ -188,3 +190,17 @@ STORAGES = {
 # --- RESZTA USTAWIENIA ---
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder', # Szuka w /frontend/static/
+]
+
+# Ustaw folder, gdzie pliki statyczne będą zbierane
+# Nie jest używane w dev, ale wymagane, gdy DEBUG=False, więc zostawiamy
+STATIC_ROOT = BASE_DIR / 'staticfiles_build' 
+
+# Dodaj folder 'static' aplikacji 'frontend' do miejsc, gdzie Django szuka
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend' / 'static',
+]
