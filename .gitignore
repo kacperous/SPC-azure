@@ -7,8 +7,6 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
-static/
-
 # Environment variables
 .env
 .env.local
@@ -94,7 +92,5 @@ docker-compose.override.yml
 # Local development settings
 local.py
 
-# Logs
-logs/
 
 processed_food_data.parquet

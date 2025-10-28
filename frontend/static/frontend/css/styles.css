@@ -1,0 +1,37 @@
+/* frontend/static/frontend/css/styles.css */
+body {
+    background-color: #212529; /* Ciemne tło */
+    color: #e9ecef;
+}
+
+.card {
+    background-color: #343a40; /* Ciemniejsza karta */
+    color: #e9ecef;
+    border: 1px solid #495057;
+}
+
+.form-control, .form-select {
+    background-color: #495057 !important;
+    color: #e9ecef !important;
+    border-color: #6c757d;
+}
+
+.file-list-item {
+    transition: background-color 0.2s;
+    border-left: 5px solid #17a2b8;
+    background-color: #343a40;
+    color: #e9ecef;
+}
+
+.file-list-item:hover {
+    background-color: #3d444b;
+}
+
+#auth-container { max-width: 500px; margin-top: 50px; }
+#admin-controls {
+    border: 2px solid #ffc107;
+    background-color: #495057;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
