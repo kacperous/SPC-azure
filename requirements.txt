@@ -5,3 +5,4 @@ djangorestframework
 drf-spectacular
 djangorestframework-simplejwt
 django-storages[azure]
+django-cors-headers

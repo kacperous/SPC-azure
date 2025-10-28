@@ -1,7 +1,3 @@
-"""
-Django settings for spc project.
-"""
-
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -12,13 +8,11 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --- ŚRODOWISKO I BEZPIECZEŃSTWO ---
+
 SECRET_KEY = os.getenv("BACKEND_SECRET_KEY")
-
-# WAŻNE: W trybie lokalnym DOCKER musisz mieć DEBUG=True, aby poprawnie
-# zarządzać błędami i plikami. Zmieniamy na True:
-DEBUG = True 
-
-ALLOWED_HOSTS = ["*"] # Zostawiamy na development
+DEBUG = os.environ.get('DEBUG', 'True') == 'True' # Używamy zmiennej środowiskowej
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
 # --- APPLICATION DEFINITION ---
@@ -32,10 +26,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Zewnętrzne pakiety
-    'drf_spectacular',
     'rest_framework',
-    'rest_framework_simplejwt', 
+    'corsheaders', # Dla komunikacji React/JS
     'storages',  # Azure Storage
+    'rest_framework_simplejwt', 
+    'drf_spectacular',
 
     # Twoje aplikacje
     'users',
@@ -43,7 +38,6 @@ INSTALLED_APPS = [
     'logs',
     'frontend',
 ]
-
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -62,15 +56,10 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
 }
 
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'SPC API',
-    'DESCRIPTION': 'Project SPC API documentation',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # MUSI BYĆ PIERWSZE
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -81,11 +70,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'spc.urls'
 
+# --- KONFIGURACJA SZABLONÓW ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')], 
-        'APP_DIRS': True,
+        # Usuwamy 'os.path.join(BASE_DIR, 'templates')', polegając na APP_DIRS
+        'DIRS': [], 
+        'APP_DIRS': True, # To każe szukać w frontend/templates/
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -96,7 +87,6 @@ TEMPLATES = [
         },
     },
 ]
-
 
 
 WSGI_APPLICATION = 'spc.wsgi.application'
@@ -115,38 +105,24 @@ DATABASES = {
         'HOST': DB_HOST, 
         'PORT': os.getenv('POSTGRES_PORT', '5432'),     
         'OPTIONS': {
-            'sslmode': 'require' if DB_HOST.endswith('.azure.com') else 'allow'
+            # Wymagane dla Azure
+            'sslmode': 'require' if 'azure.com' in DB_HOST else 'allow' 
         }
     }
 }
-
-
-# --- PASSWORD VALIDATION & LOCALES ---
-
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# --- FILE STORAGE (MEDIA & STATIC) ---
-
-# Użyjemy globalnych zmiennych z .env do tworzenia adresów URL
 AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
-AZURE_CONTAINER = os.getenv('AZURE_CONTAINER')
+AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
 AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
 
-# URL do publicznego dostępu (Media)
 MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
-
-# URL do plików statycznych (np. CSS)
 STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/static/'
 
 
@@ -155,20 +131,12 @@ STORAGES = {
     "default": {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
         "OPTIONS": {
-            # AUTENTYKACJA
             "account_name": AZURE_ACCOUNT_NAME,
             "account_key": os.getenv("AZURE_ACCOUNT_KEY"),
-            
-            # WŁAŚCIWE USTAWIENIA AZURE
             "azure_container": AZURE_CONTAINER,
-            # "azure_protocol": 'https', # Zawsze używaj HTTPS
-            "azure_ssl": True, # Wymuszenie bezpiecznego połączenia
-            
-            # USTAWIENIA TOKENU SAS (Klucz do rozwiązania problemu PublicAccessNotPermitted)
-            "expiration_secs": timedelta(hours=1).total_seconds(), # Token wygasa po 1h
-            
-            # Bezpieczeństwo i domyślny dostęp (None jest najlepsze dla SAS)
-            "overwrite_files": False, # Nie nadpisuj plików
+            "azure_ssl": True, 
+            "expiration_secs": timedelta(hours=1).total_seconds(),
+            "overwrite_files": False,
         },
     },
     
@@ -179,28 +147,10 @@ STORAGES = {
             "account_name": AZURE_ACCOUNT_NAME,
             "account_key": os.getenv("AZURE_ACCOUNT_KEY"),
             "azure_container": "static", # Kontener na pliki statyczne
-            # "azure_protocol": 'https',
             "azure_ssl": True,
-            "cache_control": "public, max-age=31536000, immutable", # Długie buforowanie
-        },
+            "cache_control": "public, max-age=31536000, immutable",
+        }
     }
 }
 
 
-# --- RESZTA USTAWIENIA ---
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder', # Szuka w /frontend/static/
-]
-
-# Ustaw folder, gdzie pliki statyczne będą zbierane
-# Nie jest używane w dev, ale wymagane, gdy DEBUG=False, więc zostawiamy
-STATIC_ROOT = BASE_DIR / 'staticfiles_build' 
-
-# Dodaj folder 'static' aplikacji 'frontend' do miejsc, gdzie Django szuka
-STATICFILES_DIRS = [
-    BASE_DIR / 'frontend' / 'static',
-]

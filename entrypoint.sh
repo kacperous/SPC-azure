@@ -1,11 +1,12 @@
 #!/bin/bash
 
-echo "Waiting for PostgreSQL..."
-while ! pg_isready -h db_spc -p 5432 -U $POSTGRES_USER -d $POSTGRES_DB; do
+echo "Waiting for PostgreSQL ($POSTGRES_HOST)..."
+
+# Zmieniamy 'db_spc' na zmienną środowiskową, która zawiera adres Azure
+while ! pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER -d $POSTGRES_DB; do
     sleep 1
 done
 echo "PostgreSQL started"
-
 echo "Running migrations..."
 
 python manage.py makemigrations
