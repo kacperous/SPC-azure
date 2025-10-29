@@ -14,6 +14,7 @@ class ActivityLog(models.Model):
         FILE_DOWNLOAD = 'DOWNLOAD', 'Pobranie pliku'
         FILE_DELETE = 'DELETE', 'Usunięcie pliku'
         USER_STATUS_CHANGE = 'STATUS_CHANGE', 'Zmiana statusu użytkownika'
+        FILE_RENAME = 'FILE_RENAME', 'Zmiana nazwy pliku'
         
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
