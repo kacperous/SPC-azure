@@ -13,12 +13,19 @@ echo "Running migrations..."
 python manage.py makemigrations
 python manage.py migrate
 
-echo "Creating superuser..."
-    python manage.py createsuperuser \
-        --email $DJANGO_SUPERUSER_EMAIL \
-        --username $DJANGO_SUPERUSER_USERNAME \
-        --noinput
-    echo "Superuser created successfully!"
+
+echo "Creating superuser if needed..."
+python manage.py shell -c "
+from django.contrib.auth import get_user_model;
+User = get_user_model();
+if not User.objects.filter(username='$DJANGO_SUPERUSER_USERNAME').exists():
+    User.objects.create_superuser('$DJANGO_SUPERUSER_USERNAME', '$DJANGO_SUPERUSER_EMAIL', '$DJANGO_SUPERUSER_PASSWORD')
+    print('Superuser created!')
+else:
+    print('Superuser already exists')
+"
+
+PORT=${PORT:-8000}
 
 echo "Starting server..."
-python manage.py runserver 0.0.0.0:6543 
+exec gunicorn spc.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120
