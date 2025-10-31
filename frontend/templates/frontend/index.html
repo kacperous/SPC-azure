@@ -50,6 +50,7 @@
     </style>
 </head>
 <body>
+    <a href="userView.html">stronka główna</a>
     <div id="auth-screen" class="container">
         <div id="auth-container" class="card p-4 mx-auto">
             <ul class="nav nav-tabs" role="tablist">
@@ -349,13 +350,13 @@
                     noFilesElement.classList.remove('d-none');
                 } else {
                     files.forEach(file => {
-                        const ownerInfo = (isAdmin) ? `${file.owner}` : '';
+                        const ownerInfo = (isAdmin) ? `${file.owner_username || file.owner}` : '';
                         const fileSizeKB = (file.file_size / 1024).toFixed(2);
                         listElement.innerHTML += `
                             <div class="file-list-item card mb-2 p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>📄 ${file.file_name}</strong> 
+                                        <strong>📄 ${file.original_filename}</strong> 
                                         ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
                                         <br>
                                         <small class="text-muted">${file.description || 'Brak opisu'}</small>
@@ -363,7 +364,7 @@
                                         <small class="text-info">Rozmiar: ${fileSizeKB} KB | Wgrano: ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
                                     </div>
                                     <div>
-                                        <a href="${file.file}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
+                                        <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})">🗑️ Usuń</button>
                                     </div>
                                 </div>

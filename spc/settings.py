@@ -4,12 +4,11 @@ from datetime import timedelta
 import os 
 
 load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- ŚRODOWISKO I BEZPIECZEŃSTWO ---
 SECRET_KEY = os.getenv("BACKEND_SECRET_KEY")
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'  # ZAWSZE False w produkcji
+DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get(
     'DJANGO_ALLOWED_HOSTS', 
@@ -21,6 +20,8 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS', 
     'http://localhost'
 ).split(',')
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -92,7 +93,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'spc.wsgi.application'
 
-# --- DATABASE (AZURE POSTGRESQL) ---
 DB_HOST = os.getenv('POSTGRES_HOST', 'db_spc') 
 
 DATABASES = {
@@ -118,7 +118,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- AZURE BLOB STORAGE (tylko MEDIA) ---
 AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
-AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
+AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'files')
 AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
 
 # URL do plików wgrywanych przez użytkowników
@@ -144,3 +144,33 @@ STORAGES = {
 
 # STATIC - minimalna konfiguracja (Django domyślnie)
 STATIC_URL = '/static/'
+
+
+# --- LOGOWANIE DEBUG ---
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} - {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'files': {  # Logger z files/models.py
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}

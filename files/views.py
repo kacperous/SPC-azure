@@ -8,13 +8,15 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpResponse
-from urllib.parse import quote
-
+from urllib.parse import quote    
+import logging
 # Importujemy funkcję 'upload_to' z modelu, aby móc generować nowe ścieżki
 from .models import UserFile, user_directory_path 
 from .serializers import UserFileSerializer
 from logs.models import ActivityLog 
 import mimetypes
+
+logger = logging.getLogger(__name__)
 
 class UserFileViewSet(viewsets.ModelViewSet):
     serializer_class = UserFileSerializer
@@ -112,36 +114,49 @@ class UserFileViewSet(viewsets.ModelViewSet):
 
         return Response({'url': final_url, 'filename': user_file.original_filename})    
 
-    def perform_destroy(self, instance):
-        file_name = instance.original_filename
-        storage = instance.file.storage  # Pobieramy backend (np. AzureStorage)
-        file_path = instance.file.name   # Pobieramy ścieżkę (np. 'user_uploads/8/komendki.txt')
 
+    def perform_destroy(self, instance):
+        """
+        Nadpisujemy perform_destroy, aby fizycznie usunąć plik z Azure Blob Storage.
+        """
         try:
-            # Krok 1: Jawnie usuń plik z Azure Blob Storage
-            # To jest najważniejsza zmiana!
-            storage.delete(file_path)
+            # Usuń fizyczny plik z Azure Blob
+            if instance.file:
+                file_path = instance.file.name
+                storage = instance.file.storage
+                
+                logger.info(f"[DELETE] Próba usunięcia: {file_path}")
+                
+                if storage.exists(file_path):
+                    storage.delete(file_path)
+                    logger.info(f"[DELETE] Usunięto blob: {file_path}")
+                else:
+                    logger.warning(f"[DELETE] Blob nie istnieje: {file_path}")
             
-            # Krok 2: Jeśli powyższe się udało, usuń rekord z bazy danych
-            instance.delete() 
+            # Usuń wpis z bazy
+            instance.delete()
+            logger.info(f"[DELETE] Usunięto z bazy: {instance.original_filename}")
             
-            # Krok 3: Logowanie sukcesu
+            # Log sukcesu
             ActivityLog.objects.create(
                 user=self.request.user,
-                action=ActivityLog.ActionType.FILE_DELETE,
-                details=f"Usunięto plik: {file_name} (z DB i Azure)"
+                action=ActivityLog.ActionType.FILE_DELETE,  # ← POPRAWKA
+                details=f'Deleted file: {instance.original_filename}'  # ← POPRAWKA: original_filename
             )
             
         except Exception as e:
-            # Krok 4: Jeśli usuwanie z Azure się nie udało, NIE usuwaj z DB
-            # i zwróć błąd 500
+            logger.error(f"[DELETE] Błąd podczas usuwania: {str(e)}")
+            
+            # Log błędu
             ActivityLog.objects.create(
                 user=self.request.user,
-                action=ActivityLog.ActionType.ERROR, # Załóżmy, że masz taki typ logu
-                details=f"Błąd podczas usuwania pliku '{file_name}': {str(e)}"
+                action=ActivityLog.ActionType.FILE_DELETE,  # ← POPRAWKA
+                details=f'Failed to delete file: {instance.original_filename}. Error: {str(e)}'  # ← POPRAWKA
             )
-            # Zgłoś wyjątek, aby DRF zwrócił błąd 500 zamiast 204
-            raise PermissionDenied(f"Nie można usunąć pliku z Azure. Błąd: {str(e)}")
+            
+            # Usuń z bazy nawet jeśli blob nie został usunięty
+            instance.delete()
+
 
     # --- NOWA AKCJA: ZMIANA NAZWY ---
     @action(detail=True, methods=['patch'], url_path='rename')

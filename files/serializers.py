@@ -1,22 +1,21 @@
 from rest_framework import serializers
 from .models import UserFile
 
-class UserFileSerializer(serializers.ModelSerializer):
-    # To pole doda nazwę właściciela (np. "admin") do JSONa
-    owner = serializers.ReadOnlyField(source='owner.username')
-    # Usunięto file_url dla bezpieczeństwa - dostęp do plików tylko przez endpointy view/download
 
+class UserFileSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+    
     class Meta:
         model = UserFile
-        # Pola, które "tłumacz" ma pokazywać w JSONie
-        # 'file' jest potrzebne do uploadu (POST)
-        fields = ['id', 'owner', 'original_filename', 'uploaded_at', 'file_size', 'file', 'is_zip']
-        
-        # Tych pól nie da się edytować przy wysyłaniu (ustawią się same)
-        read_only_fields = ['owner', 'uploaded_at', 'file_size', 'is_zip','original_filename']
-        
-        # To sprawia, że pole 'file' jest wymagane tylko przy tworzeniu (POST)
-        # ale nie jest pokazywane przy listowaniu (GET)
-        extra_kwargs = {
-            'file': {'write_only': True}
-        }
+        fields = ['id', 'file', 'file_url', 'original_filename', 'file_size', 'uploaded_at', 'is_zip', 'owner', 'owner_username']  # ← DODANE: 'file'
+        read_only_fields = ['id', 'uploaded_at', 'owner', 'file_url', 'owner_username', 'original_filename', 'file_size']
+    
+    def get_file_url(self, obj):
+        """Zwróć pełny URL do pliku w Azure Blob Storage"""
+        if obj.file:
+            try:
+                return obj.file.url
+            except Exception as e:
+                return None
+        return None
