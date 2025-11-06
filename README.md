@@ -1,5 +1,5 @@
 # SPC Project
-
+docker build -t spc-cloud . && docker run -it --rm --env-file .env -p 8000:8000 spc-cloud
 ## 🛠️ Stack
 - **Backend:** Django + Django REST Framework
 - **Frontend:** Django Templates, HTML, CSS, JavaScript
