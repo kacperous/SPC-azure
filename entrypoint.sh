@@ -3,7 +3,7 @@
 echo "Waiting for PostgreSQL ($POSTGRES_HOST)..."
 
 # Zmieniamy 'db_spc' na zmienną środowiskową, która zawiera adres Azure
-while ! pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER -d $POSTGRES_DB; do
+while ! pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DB; do
     sleep 1
 done
 echo "PostgreSQL started"
