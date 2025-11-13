@@ -47,6 +47,47 @@
             border-radius: 8px;
             margin-bottom: 30px;
         }
+
+        .file-name-link {
+            cursor: pointer;
+            color: #17a2b8;
+            text-decoration: none;
+        }
+
+        .file-name-link:hover {
+            color: #20c997;
+            text-decoration: underline;
+        }
+
+        .modal-content {
+            background-color: #343a40;
+            color: #e9ecef;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #495057;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #495057;
+        }
+
+        #preview-container {
+            max-height: 70vh;
+            overflow: auto;
+            text-align: center;
+        }
+
+        #preview-container img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        #preview-container iframe {
+            width: 100%;
+            height: 70vh;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -155,6 +196,31 @@
             </div>
             <div id="no-files-msg" class="alert alert-info d-none">Brak plików do wyświetlenia.</div>
             <div id="file-list"></div>
+        </div>
+    </div>
+
+    <!-- Modal podglądu pliku -->
+    <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filePreviewModalLabel">
+                        <span id="preview-filename">Podgląd pliku</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="preview-container">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Ładowanie...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a id="preview-download-btn" href="#" class="btn btn-info" download>⬇️ Pobierz plik</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -357,7 +423,7 @@
                             <div class="file-list-item card mb-2 p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>📄 <span id="filename-${file.id}">${file.original_filename}</span></strong> 
+                                        <strong>📄 <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
                                         ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
                                         <br>
                                         <small class="text-muted">${file.description || 'Brak opisu'}</small>
@@ -469,6 +535,81 @@
             } catch (error) {
                 alert('❌ Błąd połączenia z serwerem.');
             }
+        }
+
+        function previewFile(fileId, filename, fileUrl) {
+            const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+            const previewContainer = document.getElementById('preview-container');
+            const previewFilename = document.getElementById('preview-filename');
+            const downloadBtn = document.getElementById('preview-download-btn');
+            
+            // Ustaw nazwę pliku i link do pobrania
+            previewFilename.textContent = filename;
+            downloadBtn.href = fileUrl;
+            downloadBtn.download = filename;
+            
+            // Wyświetl spinner podczas ładowania
+            previewContainer.innerHTML = '<div class="spinner-border text-info" role="status"><span class="visually-hidden">Ładowanie...</span></div>';
+            
+            // Otwórz modal
+            modal.show();
+            
+            // Wykryj typ pliku na podstawie rozszerzenia
+            const extension = filename.split('.').pop().toLowerCase();
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+            const videoExtensions = ['mp4', 'webm', 'ogg'];
+            const audioExtensions = ['mp3', 'wav', 'ogg', 'aac'];
+            const pdfExtensions = ['pdf'];
+            const textExtensions = ['txt', 'csv', 'json', 'xml', 'log', 'md'];
+            
+            if (imageExtensions.includes(extension)) {
+                // Obrazy
+                previewContainer.innerHTML = `<img src="${fileUrl}" alt="${filename}" class="img-fluid">`;
+            } else if (pdfExtensions.includes(extension)) {
+                // PDF
+                previewContainer.innerHTML = `<iframe src="${fileUrl}" type="application/pdf"></iframe>`;
+            } else if (videoExtensions.includes(extension)) {
+                // Wideo
+                previewContainer.innerHTML = `
+                    <video controls style="max-width: 100%; max-height: 70vh;">
+                        <source src="${fileUrl}" type="video/${extension}">
+                        Twoja przeglądarka nie obsługuje odtwarzania wideo.
+                    </video>
+                `;
+            } else if (audioExtensions.includes(extension)) {
+                // Audio
+                previewContainer.innerHTML = `
+                    <audio controls style="width: 100%;">
+                        <source src="${fileUrl}" type="audio/${extension}">
+                        Twoja przeglądarka nie obsługuje odtwarzania audio.
+                    </audio>
+                    <p class="mt-3">🎵 ${filename}</p>
+                `;
+            } else if (textExtensions.includes(extension)) {
+                // Pliki tekstowe
+                fetch(fileUrl)
+                    .then(response => response.text())
+                    .then(text => {
+                        previewContainer.innerHTML = `<pre style="text-align: left; max-height: 70vh; overflow: auto; background-color: #2d2d2d; padding: 15px; border-radius: 5px;">${escapeHtml(text)}</pre>`;
+                    })
+                    .catch(error => {
+                        previewContainer.innerHTML = '<p class="text-warning">⚠️ Nie można załadować zawartości pliku tekstowego.</p>';
+                    });
+            } else {
+                // Nieobsługiwany typ
+                previewContainer.innerHTML = `
+                    <div class="alert alert-warning">
+                        <p>⚠️ Podgląd tego typu pliku nie jest obsługiwany.</p>
+                        <p>Pobierz plik, aby go otworzyć.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         async function renameFile(fileId, currentName) {
