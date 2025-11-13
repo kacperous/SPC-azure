@@ -357,15 +357,16 @@
                             <div class="file-list-item card mb-2 p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>📄 ${file.original_filename}</strong> 
+                                        <strong>📄 <span id="filename-${file.id}">${file.original_filename}</span></strong> 
                                         ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
                                         <br>
                                         <small class="text-muted">${file.description || 'Brak opisu'}</small>
                                         <br>
                                         <small class="text-info">Rozmiar: ${fileSizeKB} KB | Wgrano: ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
                                     </div>
-                                    <div>
+                                    <div class="btn-group" role="group">
                                         <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="renameFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">✏️ Zmień nazwę</button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})">🗑️ Usuń</button>
                                     </div>
                                 </div>
@@ -466,6 +467,52 @@
                     alert('❌ Nie udało się usunąć pliku.');
                 }
             } catch (error) {
+                alert('❌ Błąd połączenia z serwerem.');
+            }
+        }
+
+        async function renameFile(fileId, currentName) {
+            const newName = prompt('Podaj nową nazwę pliku:', currentName);
+            
+            if (!newName || newName.trim() === '') {
+                return; // Anulowano lub pusta nazwa
+            }
+
+            if (newName === currentName) {
+                alert('ℹ️ Nazwa jest taka sama.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/files/${fileId}/rename/`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ new_filename: newName.trim() })
+                });
+
+                if (response.status === 401) {
+                    if (await refreshAccessToken()) return renameFile(fileId, currentName);
+                    return toggleView(false);
+                }
+
+                if (response.ok) {
+                    const updatedFile = await response.json();
+                    alert(`✅ Nazwa zmieniona na: ${updatedFile.original_filename}`);
+                    
+                    // Aktualizuj nazwę w interfejsie bez przeładowywania całej listy
+                    const filenameElement = document.getElementById(`filename-${fileId}`);
+                    if (filenameElement) {
+                        filenameElement.textContent = updatedFile.original_filename;
+                    }
+                    
+                    // Opcjonalnie przeładuj całą listę dla pewności
+                    loadFiles();
+                } else {
+                    const errorData = await response.json();
+                    alert(`❌ Błąd zmiany nazwy: ${errorData.error || JSON.stringify(errorData)}`);
+                }
+            } catch (error) {
+                console.error('Błąd zmiany nazwy:', error);
                 alert('❌ Błąd połączenia z serwerem.');
             }
         }
