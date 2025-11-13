@@ -436,6 +436,37 @@
             }
         }
 
+        function getFileIcon(filename) {
+            const extension = filename.split('.').pop().toLowerCase();
+            
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+            if (imageExtensions.includes(extension)) return '🖼️';
+            
+            if (extension === 'pdf') return '📕';
+            if (['doc', 'docx'].includes(extension)) return '📘';
+            if (['xls', 'xlsx'].includes(extension)) return '📗';
+            if (['ppt', 'pptx'].includes(extension)) return '📙';
+            
+            if (['js', 'jsx', 'ts', 'tsx'].includes(extension)) return '📜';
+            if (['py'].includes(extension)) return '🐍';
+            if (['java'].includes(extension)) return '☕';
+            if (['html', 'htm'].includes(extension)) return '🌐';
+            if (['css', 'scss', 'sass'].includes(extension)) return '🎨';
+            if (['json', 'xml', 'yaml', 'yml'].includes(extension)) return '⚙️';
+            
+            if (['txt', 'md', 'log'].includes(extension)) return '📝';
+            
+            if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) return '📦';
+            
+            if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'].includes(extension)) return '🎬';
+            
+            if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) return '🎵';
+            
+            if (['exe', 'msi', 'app', 'deb', 'rpm'].includes(extension)) return '⚙️';
+            
+            return '📄';
+        }
+
         function renderFiles(files) {
             const listElement = document.getElementById('file-list');
             const noFilesElement = document.getElementById('no-files-msg');
@@ -453,11 +484,12 @@
                 files.forEach(file => {
                     const ownerInfo = (isAdmin) ? `${file.owner_username || file.owner}` : '';
                     const fileSizeKB = (file.file_size / 1024).toFixed(2);
+                    const fileIcon = getFileIcon(file.original_filename);
                     listElement.innerHTML += `
                         <div class="file-list-item card mb-2 p-3" data-filename="${file.original_filename.toLowerCase()}">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>📄 <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
+                                    <strong>${fileIcon} <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
                                     ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
                                     <br>
                                     <small class="text-muted">${file.description || 'Brak opisu'}</small>
