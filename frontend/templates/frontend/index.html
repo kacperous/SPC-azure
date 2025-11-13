@@ -187,6 +187,19 @@
             <div id="upload-status" class="mt-3"></div>
         </div>
 
+        <div class="card p-4 mb-4 mt-4">
+            <h3>🔍 Wyszukaj plik</h3>
+            <div class="mb-3">
+                <label for="search-input" class="form-label">Szukaj po nazwie pliku:</label>
+                <div class="input-group">
+                    <span class="input-group-text">🔎</span>
+                    <input type="text" id="search-input" class="form-control" placeholder="Wpisz nazwę pliku..." oninput="filterFiles()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">✖️ Wyczyść</button>
+                </div>
+                <small class="text-muted">Wyświetlono: <span id="filtered-count">0</span> z <span id="total-count">0</span> plików</small>
+            </div>
+        </div>
+
         <div class="card p-4 mt-4">
             <h3>📁 Pliki <small id="files-owner-info" class="text-muted"></small></h3>
             <div id="loading-files" class="text-center d-none">
@@ -231,6 +244,7 @@
         let refreshToken = localStorage.getItem('refresh_token');
         let currentUsername = '';
         let isAdmin = false;
+        let allFiles = [];
 
         // --- NARZĘDZIA OGÓLNE ---
         function getAuthHeaders(contentType = 'application/json') {
@@ -411,40 +425,76 @@
 
                 const files = await response.json();
                 loadingElement.classList.add('d-none');
-                listElement.innerHTML = '';
-
-                if (files.length === 0) {
-                    noFilesElement.classList.remove('d-none');
-                } else {
-                    files.forEach(file => {
-                        const ownerInfo = (isAdmin) ? `${file.owner_username || file.owner}` : '';
-                        const fileSizeKB = (file.file_size / 1024).toFixed(2);
-                        listElement.innerHTML += `
-                            <div class="file-list-item card mb-2 p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>📄 <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
-                                        ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
-                                        <br>
-                                        <small class="text-muted">${file.description || 'Brak opisu'}</small>
-                                        <br>
-                                        <small class="text-info">Rozmiar: ${fileSizeKB} KB | Wgrano: ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
-                                    </div>
-                                    <div class="btn-group" role="group">
-                                        <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
-                                        <button class="btn btn-sm btn-outline-warning" onclick="renameFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">✏️ Zmień nazwę</button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})">🗑️ Usuń</button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
+                
+                allFiles = files; // Zapisz pliki globalnie
+                renderFiles(files); // Wyrenderuj pliki
+                
             } catch (error) {
                 loadingElement.classList.add('d-none');
                 console.error('Błąd ładowania plików:', error);
-                listElement.innerHTML = '<div class="alert alert-danger">Błąd ładowania plików.</div>';
+                document.getElementById('file-list').innerHTML = '<div class="alert alert-danger">Błąd ładowania plików.</div>';
             }
+        }
+
+        function renderFiles(files) {
+            const listElement = document.getElementById('file-list');
+            const noFilesElement = document.getElementById('no-files-msg');
+            
+            listElement.innerHTML = '';
+            
+            // Aktualizuj liczniki
+            document.getElementById('total-count').textContent = allFiles.length;
+            document.getElementById('filtered-count').textContent = files.length;
+            
+            if (files.length === 0) {
+                noFilesElement.classList.remove('d-none');
+            } else {
+                noFilesElement.classList.add('d-none');
+                files.forEach(file => {
+                    const ownerInfo = (isAdmin) ? `${file.owner_username || file.owner}` : '';
+                    const fileSizeKB = (file.file_size / 1024).toFixed(2);
+                    listElement.innerHTML += `
+                        <div class="file-list-item card mb-2 p-3" data-filename="${file.original_filename.toLowerCase()}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>📄 <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
+                                    ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
+                                    <br>
+                                    <small class="text-muted">${file.description || 'Brak opisu'}</small>
+                                    <br>
+                                    <small class="text-info">Rozmiar: ${fileSizeKB} KB | Wgrano: ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
+                                </div>
+                                <div class="btn-group" role="group">
+                                    <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="renameFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">✏️ Zmień nazwę</button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})">🗑️ Usuń</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function filterFiles() {
+            const searchInput = document.getElementById('search-input');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                // Pokaż wszystkie pliki
+                renderFiles(allFiles);
+            } else {
+                // Filtruj pliki po nazwie
+                const filtered = allFiles.filter(file => 
+                    file.original_filename.toLowerCase().includes(searchTerm)
+                );
+                renderFiles(filtered);
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            filterFiles();
         }
 
         async function uploadFiles() {
