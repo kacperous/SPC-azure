@@ -3,212 +3,653 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Manager</title>
+    <title>Cloud Storage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        /* frontend/static/frontend/css/styles.css */
+        :root {
+            --primary-bg: #0a0e27;
+            --secondary-bg: #131a35;
+            --card-bg: #1a1f3a;
+            --hover-bg: #252b4a;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3548;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #212529;
-            color: #e9ecef;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .card {
-            background-color: #343a40;
-            color: #e9ecef;
-            border: 1px solid #495057;
-        }
-
-        .form-control, .form-select {
-            background-color: #495057 !important;
-            color: #e9ecef !important;
-            border-color: #6c757d;
-        }
-
-        .file-list-item {
-            transition: background-color 0.2s;
-            border-left: 5px solid #17a2b8;
-            background-color: #343a40;
-            color: #e9ecef;
-        }
-
-        .file-list-item:hover {
-            background-color: #3d444b;
-        }
-
-        #auth-container { 
-            max-width: 500px; 
-            margin-top: 50px; 
-        }
-
-        #admin-controls {
-            border: 2px solid #ffc107;
-            background-color: #495057;
+        /* Auth Screen */
+        #auth-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            border-radius: 8px;
+        }
+
+        #auth-container {
+            max-width: 450px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-logo {
+            text-align: center;
             margin-bottom: 30px;
         }
 
+        .auth-logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .auth-logo p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .nav-tabs {
+            border: none;
+            margin-bottom: 30px;
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 10px;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-control, .form-select {
+            background: var(--secondary-bg) !important;
+            border: 1px solid var(--border-color) !important;
+            color: #ffffff !important;
+            padding: 12px 16px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--card-bg) !important;
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        /* Dashboard */
+        .navbar-custom {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .navbar-text {
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        /* Cards */
+        .card-modern {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .card-modern:hover {
+            box-shadow: 0 12px 28px rgba(99, 102, 241, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .card-header-custom {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Admin Panel */
+        #admin-controls {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%);
+            border: 2px solid rgba(245, 158, 11, 0.6);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
+        }
+
+        #admin-controls .card-header-custom {
+            color: #fbbf24;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            border-bottom: 2px solid rgba(251, 191, 36, 0.3);
+            padding-bottom: 16px;
+        }
+
+        /* File List */
+        .file-list-item {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+        }
+
+        .file-list-item:hover {
+            background: var(--hover-bg);
+            transform: translateX(4px);
+            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.25);
+        }
+
         .file-name-link {
-            cursor: pointer;
-            color: #17a2b8;
+            color: var(--accent);
             text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
         }
 
         .file-name-link:hover {
-            color: #20c997;
-            text-decoration: underline;
+            color: #818cf8;
         }
 
+        .file-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        /* Buttons */
+        .btn-group .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-outline-info {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-outline-info:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-outline-warning {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .btn-outline-warning:hover {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-outline-danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-outline-light {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline-light:hover {
+            background: var(--text-secondary);
+            color: var(--primary-bg);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Input Groups */
+        .input-group-text {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 10px 0 0 10px;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        /* Modal */
         .modal-content {
-            background-color: #343a40;
-            color: #e9ecef;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
         }
 
         .modal-header {
-            border-bottom: 1px solid #495057;
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .modal-body {
+            padding: 24px;
         }
 
         .modal-footer {
-            border-top: 1px solid #495057;
+            border-top: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .btn-close {
+            filter: invert(1);
         }
 
         #preview-container {
             max-height: 70vh;
             overflow: auto;
             text-align: center;
+            border-radius: 12px;
         }
 
         #preview-container img {
             max-width: 100%;
             height: auto;
+            border-radius: 8px;
         }
 
         #preview-container iframe {
             width: 100%;
             height: 70vh;
             border: none;
+            border-radius: 8px;
+        }
+
+        /* Alerts */
+        .alert {
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        /* Spinner */
+        .spinner-border {
+            color: var(--accent);
+        }
+
+        /* Text colors */
+        .text-muted {
+            color: #ffffff !important;
+            opacity: 0.7;
+        }
+
+        small {
+            color: #ffffff;
+            opacity: 0.7;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #auth-container {
+                padding: 24px;
+            }
+
+            .card-modern {
+                padding: 16px;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+                border-radius: 10px !important;
+                margin-bottom: 8px;
+            }
+
+            .file-list-item {
+                padding: 12px;
+            }
+
+            .file-list-item .d-flex {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .navbar-brand {
+                font-size: 20px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 8px;
+            }
+        }
+
+        /* Smooth scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
         }
     </style>
 </head>
 <body>
-    <a href="userView.html">stronka główna</a>
-    <div id="auth-screen" class="container">
-        <div id="auth-container" class="card p-4 mx-auto">
+    <div id="auth-screen">
+        <div id="auth-container">
+            <div class="auth-logo">
+                <h1>Cloud Storage</h1>
+                <p>Bezpieczne przechowywanie plików w chmurze</p>
+            </div>
             <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="login-tab" data-bs-toggle="tab" href="#login-pane">Logowanie</a>
+                <li class="nav-item flex-fill">
+                    <a class="nav-link active text-center" id="login-tab" data-bs-toggle="tab" href="#login-pane">Logowanie</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="register-tab" data-bs-toggle="tab" href="#register-pane">Rejestracja</a>
+                <li class="nav-item flex-fill">
+                    <a class="nav-link text-center" id="register-tab" data-bs-toggle="tab" href="#register-pane">Rejestracja</a>
                 </li>
             </ul>
-            <div class="tab-content mt-3">
+            <div class="tab-content">
                 <div class="tab-pane fade show active" id="login-pane">
-                    <h3>Zaloguj się</h3>
                     <div class="mb-3">
                         <label for="login-username" class="form-label">Nazwa użytkownika</label>
-                        <input type="text" class="form-control" id="login-username" placeholder="Wpisz nazwę użytkownika">
+                        <input type="text" class="form-control" id="login-username" placeholder="Wprowadź nazwę użytkownika">
                     </div>
                     <div class="mb-3">
                         <label for="login-password" class="form-label">Hasło</label>
-                        <input type="password" class="form-control" id="login-password" placeholder="Wpisz hasło">
+                        <input type="password" class="form-control" id="login-password" placeholder="Wprowadź hasło">
                     </div>
-                    <button class="btn btn-primary w-100" onclick="login()">Zaloguj</button>
-                    <div id="login-error" class="text-danger mt-3"></div>
+                    <button class="btn btn-primary w-100" onclick="login()">Zaloguj się</button>
+                    <div id="login-error" class="alert alert-danger mt-3 d-none"></div>
                 </div>
                 <div class="tab-pane fade" id="register-pane">
-                    <h3>Zarejestruj się</h3>
                     <div class="mb-3">
                         <label for="reg-username" class="form-label">Nazwa użytkownika</label>
-                        <input type="text" class="form-control" id="reg-username" placeholder="Nowa nazwa użytkownika">
+                        <input type="text" class="form-control" id="reg-username" placeholder="Wybierz nazwę użytkownika">
                     </div>
                     <div class="mb-3">
-                        <label for="reg-email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="reg-email" placeholder="Twój email">
+                        <label for="reg-email" class="form-label">Adres email</label>
+                        <input type="email" class="form-control" id="reg-email" placeholder="twoj@email.com">
                     </div>
                     <div class="mb-3">
                         <label for="reg-password" class="form-label">Hasło</label>
                         <input type="password" class="form-control" id="reg-password" placeholder="Ustaw hasło">
                     </div>
-                    <button class="btn btn-success w-100" onclick="registerUser()">Zarejestruj</button>
-                    <div id="register-error" class="text-danger mt-3"></div>
-                    <div id="register-success" class="text-success mt-3"></div>
+                    <button class="btn btn-success w-100" onclick="registerUser()">Utwórz konto</button>
+                    <div id="register-error" class="alert alert-danger mt-3 d-none"></div>
+                    <div id="register-success" class="alert alert-success mt-3 d-none"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="dashboard-screen" class="container mt-5 d-none">
-        <nav class="navbar navbar-dark bg-dark mb-4">
-            <div class="container-fluid">
-                <span class="navbar-brand">🗂️ File Manager</span>
-                <div>
-                    <span id="username-display" class="navbar-text me-3"></span>
-                    <button id="logout-btn" class="btn btn-outline-light btn-sm" onclick="logout()">Wyloguj</button>
+    <div id="dashboard-screen" class="d-none">
+        <nav class="navbar-custom">
+            <div class="container-fluid d-flex justify-content-between align-items-center">
+                <span class="navbar-brand">Cloud Storage</span>
+                <div class="user-info">
+                    <span id="username-display" class="navbar-text"></span>
+                    <button id="logout-btn" class="btn btn-outline-light btn-sm" onclick="logout()">
+                        <i class="bi bi-box-arrow-right"></i> Wyloguj
+                    </button>
                 </div>
             </div>
         </nav>
 
-        <div id="admin-dashboard" class="d-none">
-            <div id="admin-controls">
-                <h4 class="text-warning mb-3">⚙️ Panel Administratora</h4>
-                <div class="row">
-                    <div class="col-md-6">
-                        <label for="user-filter" class="form-label">Filtruj pliki użytkownika:</label>
-                        <input type="text" id="user-filter" class="form-control" placeholder="Wpisz nazwę użytkownika" onchange="loadFiles()">
+        <div class="container-fluid px-4 py-4">
+            <div id="admin-dashboard" class="d-none">
+                <div id="admin-controls">
+                    <div class="card-header-custom">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 26px;"></i>
+                        <span>Panel Administratora</span>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Sortowanie:</label>
-                        <select id="sort-select" class="form-select" onchange="loadFiles()">
-                            <option value="-uploaded_at">Najnowsze</option>
-                            <option value="uploaded_at">Najstarsze</option>
-                            <option value="original_filename">Nazwa A-Z</option>
-                            <option value="-original_filename">Nazwa Z-A</option>
-                            <option value="-file_size">Rozmiar (malejąco)</option>
-                            <option value="file_size">Rozmiar (rosnąco)</option>
-                        </select>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label for="user-filter" class="form-label">
+                                <i class="bi bi-person-fill"></i> Filtruj pliki użytkownika
+                            </label>
+                            <input type="text" id="user-filter" class="form-control" placeholder="Wpisz nazwę użytkownika..." onchange="loadFiles()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-sort-down"></i> Sortowanie
+                            </label>
+                            <select id="sort-select" class="form-select" onchange="loadFiles()">
+                                <option value="-uploaded_at">Najnowsze</option>
+                                <option value="uploaded_at">Najstarsze</option>
+                                <option value="original_filename">Nazwa A-Z</option>
+                                <option value="-original_filename">Nazwa Z-A</option>
+                                <option value="-file_size">Rozmiar malejąco</option>
+                                <option value="file_size">Rozmiar rosnąco</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card p-4">
-            <h3>📤 Wgraj nowe pliki</h3>
-            <div class="mb-3">
-                <label for="file-input" class="form-label">Wybierz pliki (możesz wybrać wiele):</label>
-                <input type="file" class="form-control" id="file-input" multiple>
-                <small class="text-muted">Wybrano plików: <span id="file-count">0</span></small>
-            </div>
-            <div class="mb-3">
-                <label for="file-description" class="form-label">Opis (opcjonalnie, wspólny dla wszystkich):</label>
-                <textarea class="form-control" id="file-description" rows="2" placeholder="Dodaj krótki opis..."></textarea>
-            </div>
-            <button class="btn btn-primary" onclick="uploadFiles()">Wgraj pliki</button>
-            <div id="upload-status" class="mt-3"></div>
-        </div>
-
-        <div class="card p-4 mb-4 mt-4">
-            <h3>🔍 Wyszukaj plik</h3>
-            <div class="mb-3">
-                <label for="search-input" class="form-label">Szukaj po nazwie pliku:</label>
-                <div class="input-group">
-                    <span class="input-group-text">🔎</span>
-                    <input type="text" id="search-input" class="form-control" placeholder="Wpisz nazwę pliku..." oninput="filterFiles()">
-                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">✖️ Wyczyść</button>
+            <div class="card-modern">
+                <div class="card-header-custom">
+                    <i class="bi bi-cloud-upload"></i>
+                    Wgraj pliki
                 </div>
-                <small class="text-muted">Wyświetlono: <span id="filtered-count">0</span> z <span id="total-count">0</span> plików</small>
+                <div class="mb-3">
+                    <label for="file-input" class="form-label">Wybierz pliki</label>
+                    <input type="file" class="form-control" id="file-input" multiple>
+                    <small class="text-muted">Wybrano: <span id="file-count">0</span> plików</small>
+                </div>
+                <div class="mb-3">
+                    <label for="file-description" class="form-label">Opis (opcjonalnie)</label>
+                    <textarea class="form-control" id="file-description" rows="2" placeholder="Dodaj opis plików..."></textarea>
+                </div>
+                <button class="btn btn-primary w-100" onclick="uploadFiles()">
+                    <i class="bi bi-upload"></i> Wgraj pliki
+                </button>
+                <div id="upload-status" class="mt-3"></div>
             </div>
-        </div>
 
-        <div class="card p-4 mt-4">
-            <h3>📁 Pliki <small id="files-owner-info" class="text-muted"></small></h3>
-            <div id="loading-files" class="text-center d-none">
-                <div class="spinner-border text-info" role="status">
-                    <span class="visually-hidden">Ładowanie...</span>
+            <div class="card-modern">
+                <div class="card-header-custom">
+                    <i class="bi bi-search"></i>
+                    Wyszukaj plik
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="search-input" class="form-control" placeholder="Wpisz nazwę pliku..." oninput="filterFiles()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Wyświetlono: <span id="filtered-count">0</span> z <span id="total-count">0</span></small>
                 </div>
             </div>
-            <div id="no-files-msg" class="alert alert-info d-none">Brak plików do wyświetlenia.</div>
-            <div id="file-list"></div>
+
+            <div class="card-modern">
+                <div class="card-header-custom">
+                    <i class="bi bi-folder"></i>
+                    Twoje pliki <small id="files-owner-info" class="text-muted"></small>
+                </div>
+                <div id="loading-files" class="text-center d-none py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Ładowanie plików...</p>
+                </div>
+                <div id="no-files-msg" class="alert alert-info d-none">Brak plików do wyświetlenia</div>
+                <div id="file-list"></div>
+            </div>
         </div>
     </div>
 
@@ -218,20 +659,22 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="filePreviewModalLabel">
-                        <span id="preview-filename">Podgląd pliku</span>
+                        <i class="bi bi-eye"></i> <span id="preview-filename">Podgląd pliku</span>
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div id="preview-container">
-                        <div class="spinner-border text-info" role="status">
+                        <div class="spinner-border" role="status">
                             <span class="visually-hidden">Ładowanie...</span>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <a id="preview-download-btn" href="#" class="btn btn-info" download>⬇️ Pobierz plik</a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                    <a id="preview-download-btn" href="#" class="btn btn-primary" download>
+                        <i class="bi bi-download"></i> Pobierz
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zamknij</button>
                 </div>
             </div>
         </div>
@@ -271,13 +714,17 @@
             document.getElementById('username-display').classList.toggle('d-none', !isLoggedIn);
             
             if (isLoggedIn) {
-                document.getElementById('username-display').textContent = `Witaj, ${currentUsername}! ${isAdmin ? '(ADMIN)' : ''}`;
+                const displayText = isAdmin ? `${currentUsername} (Admin)` : currentUsername;
+                document.getElementById('username-display').innerHTML = `
+                    <div class="user-avatar">${currentUsername.charAt(0).toUpperCase()}</div>
+                    <span>${displayText}</span>
+                `;
                 document.getElementById('admin-dashboard').classList.toggle('d-none', !isAdmin);
                 loadFiles();
             } else {
                 currentUsername = '';
                 isAdmin = false;
-                document.getElementById('username-display').textContent = '';
+                document.getElementById('username-display').innerHTML = '';
             }
         }
 
@@ -289,6 +736,7 @@
             };
             const errorElement = document.getElementById('login-error');
             errorElement.textContent = '';
+            errorElement.classList.add('d-none');
 
             try {
                 const response = await fetch('/api/users/token/', {
@@ -306,10 +754,12 @@
                     decodeToken(accessToken);
                     toggleView(true);
                 } else {
-                    errorElement.textContent = 'Błędny login lub hasło!';
+                    errorElement.textContent = 'Nieprawidłowa nazwa użytkownika lub hasło';
+                    errorElement.classList.remove('d-none');
                 }
             } catch (error) {
-                errorElement.textContent = 'Błąd połączenia z serwerem.';
+                errorElement.textContent = 'Błąd połączenia z serwerem';
+                errorElement.classList.remove('d-none');
             }
         }
 
@@ -320,8 +770,11 @@
                 password: document.getElementById('reg-password').value,
             };
             const errorElement = document.getElementById('register-error');
+            const successElement = document.getElementById('register-success');
             errorElement.textContent = '';
-            document.getElementById('register-success').textContent = '';
+            errorElement.classList.add('d-none');
+            successElement.textContent = '';
+            successElement.classList.add('d-none');
 
             try {
                 const response = await fetch('/api/users/register/', {
@@ -331,14 +784,19 @@
                 });
 
                 if (response.status === 201) {
-                    document.getElementById('register-success').textContent = 'Rejestracja udana! Możesz się zalogować.';
-                    new bootstrap.Tab(document.getElementById('login-tab')).show();
+                    successElement.textContent = 'Konto utworzone pomyślnie! Możesz się teraz zalogować.';
+                    successElement.classList.remove('d-none');
+                    setTimeout(() => {
+                        new bootstrap.Tab(document.getElementById('login-tab')).show();
+                    }, 1500);
                 } else {
                     const errorData = await response.json();
                     errorElement.textContent = 'Błąd rejestracji: ' + JSON.stringify(errorData);
+                    errorElement.classList.remove('d-none');
                 }
             } catch (error) {
-                errorElement.textContent = 'Błąd połączenia z serwerem.';
+                errorElement.textContent = 'Błąd połączenia z serwerem';
+                errorElement.classList.remove('d-none');
             }
         }
 
@@ -486,20 +944,27 @@
                     const fileSizeKB = (file.file_size / 1024).toFixed(2);
                     const fileIcon = getFileIcon(file.original_filename);
                     listElement.innerHTML += `
-                        <div class="file-list-item card mb-2 p-3" data-filename="${file.original_filename.toLowerCase()}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>${fileIcon} <a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong> 
-                                    ${ownerInfo ? `<span class="badge bg-secondary">${ownerInfo}</span>` : ''}
-                                    <br>
-                                    <small class="text-muted">${file.description || 'Brak opisu'}</small>
-                                    <br>
-                                    <small class="text-info">Rozmiar: ${fileSizeKB} KB | Wgrano: ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
+                        <div class="file-list-item" data-filename="${file.original_filename.toLowerCase()}">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="file-icon">${fileIcon}</span>
+                                        <strong><a href="#" class="file-name-link" onclick="previewFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}', '${file.file_url}'); return false;"><span id="filename-${file.id}">${file.original_filename}</span></a></strong>
+                                        ${ownerInfo ? `<span class="badge bg-secondary ms-2">${ownerInfo}</span>` : ''}
+                                    </div>
+                                    <small class="text-muted d-block mb-1">${file.description || 'Brak opisu'}</small>
+                                    <small class="text-muted"><i class="bi bi-hdd"></i> ${fileSizeKB} KB • <i class="bi bi-clock"></i> ${new Date(file.uploaded_at).toLocaleString('pl-PL')}</small>
                                 </div>
                                 <div class="btn-group" role="group">
-                                    <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download>⬇️ Pobierz</a>
-                                    <button class="btn btn-sm btn-outline-warning" onclick="renameFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">✏️ Zmień nazwę</button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})">🗑️ Usuń</button>
+                                    <a href="${file.file_url}" class="btn btn-sm btn-outline-info" download title="Pobierz">
+                                        <i class="bi bi-download"></i> <span class="d-none d-md-inline">Pobierz</span>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="renameFile(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')\" title="Zmień nazwę">
+                                        <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Zmień</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id})" title="Usuń">
+                                        <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Usuń</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -581,11 +1046,11 @@
 
             // Podsumowanie
             if (failCount === 0) {
-                statusElement.innerHTML = `<div class="alert alert-success">✅ Wszystkie pliki wgrane pomyślnie! (${successCount}/${totalFiles})</div>`;
+                statusElement.innerHTML = `<div class="alert alert-success"><i class="bi bi-check-circle"></i> Wszystkie pliki wgrane pomyślnie (${successCount}/${totalFiles})</div>`;
             } else if (successCount === 0) {
-                statusElement.innerHTML = `<div class="alert alert-danger">❌ Nie udało się wgrać żadnego pliku.</div>`;
+                statusElement.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Nie udało się wgrać żadnego pliku</div>`;
             } else {
-                statusElement.innerHTML = `<div class="alert alert-warning">⚠️ Wgrano ${successCount} z ${totalFiles} plików. ${failCount} nie powiodło się.</div>`;
+                statusElement.innerHTML = `<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Wgrano ${successCount} z ${totalFiles} plików (${failCount} błędów)</div>`;
             }
 
             fileInput.value = '';
@@ -609,13 +1074,12 @@
                 }
 
                 if (response.status === 204) {
-                    alert('✅ Plik usunięty!');
                     loadFiles();
                 } else {
-                    alert('❌ Nie udało się usunąć pliku.');
+                    alert('Nie udało się usunąć pliku');
                 }
             } catch (error) {
-                alert('❌ Błąd połączenia z serwerem.');
+                alert('Błąd połączenia z serwerem');
             }
         }
 
@@ -665,7 +1129,7 @@
                         <source src="${fileUrl}" type="audio/${extension}">
                         Twoja przeglądarka nie obsługuje odtwarzania audio.
                     </audio>
-                    <p class="mt-3">🎵 ${filename}</p>
+                    <p class="mt-3"><i class="bi bi-music-note-beamed"></i> ${filename}</p>
                 `;
             } else if (textExtensions.includes(extension)) {
                 // Pliki tekstowe
@@ -675,14 +1139,14 @@
                         previewContainer.innerHTML = `<pre style="text-align: left; max-height: 70vh; overflow: auto; background-color: #2d2d2d; padding: 15px; border-radius: 5px;">${escapeHtml(text)}</pre>`;
                     })
                     .catch(error => {
-                        previewContainer.innerHTML = '<p class="text-warning">⚠️ Nie można załadować zawartości pliku tekstowego.</p>';
+                        previewContainer.innerHTML = '<p class="text-warning"><i class="bi bi-exclamation-triangle"></i> Nie można załadować zawartości pliku tekstowego</p>';
                     });
             } else {
                 // Nieobsługiwany typ
                 previewContainer.innerHTML = `
                     <div class="alert alert-warning">
-                        <p>⚠️ Podgląd tego typu pliku nie jest obsługiwany.</p>
-                        <p>Pobierz plik, aby go otworzyć.</p>
+                        <p><i class="bi bi-exclamation-triangle"></i> Podgląd tego typu pliku nie jest obsługiwany</p>
+                        <p>Pobierz plik, aby go otworzyć</p>
                     </div>
                 `;
             }
@@ -698,11 +1162,10 @@
             const newName = prompt('Podaj nową nazwę pliku:', currentName);
             
             if (!newName || newName.trim() === '') {
-                return; // Anulowano lub pusta nazwa
+                return;
             }
 
             if (newName === currentName) {
-                alert('ℹ️ Nazwa jest taka sama.');
                 return;
             }
 
@@ -720,23 +1183,20 @@
 
                 if (response.ok) {
                     const updatedFile = await response.json();
-                    alert(`✅ Nazwa zmieniona na: ${updatedFile.original_filename}`);
                     
-                    // Aktualizuj nazwę w interfejsie bez przeładowywania całej listy
                     const filenameElement = document.getElementById(`filename-${fileId}`);
                     if (filenameElement) {
                         filenameElement.textContent = updatedFile.original_filename;
                     }
                     
-                    // Opcjonalnie przeładuj całą listę dla pewności
                     loadFiles();
                 } else {
                     const errorData = await response.json();
-                    alert(`❌ Błąd zmiany nazwy: ${errorData.error || JSON.stringify(errorData)}`);
+                    alert(`Błąd zmiany nazwy: ${errorData.error || JSON.stringify(errorData)}`);
                 }
             } catch (error) {
                 console.error('Błąd zmiany nazwy:', error);
-                alert('❌ Błąd połączenia z serwerem.');
+                alert('Błąd połączenia z serwerem');
             }
         }
 
