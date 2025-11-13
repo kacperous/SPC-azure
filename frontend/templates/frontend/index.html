@@ -132,16 +132,17 @@
         </div>
 
         <div class="card p-4">
-            <h3>📤 Wgraj nowy plik</h3>
+            <h3>📤 Wgraj nowe pliki</h3>
             <div class="mb-3">
-                <label for="file-input" class="form-label">Wybierz plik:</label>
-                <input type="file" class="form-control" id="file-input">
+                <label for="file-input" class="form-label">Wybierz pliki (możesz wybrać wiele):</label>
+                <input type="file" class="form-control" id="file-input" multiple>
+                <small class="text-muted">Wybrano plików: <span id="file-count">0</span></small>
             </div>
             <div class="mb-3">
-                <label for="file-description" class="form-label">Opis pliku (opcjonalnie):</label>
-                <textarea class="form-control" id="file-description" rows="2" placeholder="Dodaj krótki opis pliku..."></textarea>
+                <label for="file-description" class="form-label">Opis (opcjonalnie, wspólny dla wszystkich):</label>
+                <textarea class="form-control" id="file-description" rows="2" placeholder="Dodaj krótki opis..."></textarea>
             </div>
-            <button class="btn btn-primary" onclick="uploadFile()">Wgraj plik</button>
+            <button class="btn btn-primary" onclick="uploadFiles()">Wgraj pliki</button>
             <div id="upload-status" class="mt-3"></div>
         </div>
 
@@ -379,46 +380,69 @@
             }
         }
 
-        async function uploadFile() {
+        async function uploadFiles() {
             const fileInput = document.getElementById('file-input');
             const descriptionInput = document.getElementById('file-description');
             const statusElement = document.getElementById('upload-status');
 
             if (!fileInput.files.length) {
-                statusElement.innerHTML = '<div class="alert alert-warning">Wybierz plik!</div>';
+                statusElement.innerHTML = '<div class="alert alert-warning">Wybierz przynajmniej jeden plik!</div>';
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('description', descriptionInput.value);
+            const files = Array.from(fileInput.files);
+            const totalFiles = files.length;
+            let successCount = 0;
+            let failCount = 0;
 
-            statusElement.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Wysyłanie...';
+            statusElement.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Wysyłanie ${totalFiles} plik(ów)...`;
 
-            try {
-                const response = await fetch('/api/files/', {
-                    method: 'POST',
-                    headers: getAuthHeaders(null),
-                    body: formData
-                });
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('description', descriptionInput.value);
 
-                if (response.status === 401) {
-                    if (await refreshAccessToken()) return uploadFile();
-                    return toggleView(false);
+                try {
+                    const response = await fetch('/api/files/', {
+                        method: 'POST',
+                        headers: getAuthHeaders(null),
+                        body: formData
+                    });
+
+                    if (response.status === 401) {
+                        if (await refreshAccessToken()) {
+                            i--; // Ponów próbę dla tego pliku
+                            continue;
+                        }
+                        statusElement.innerHTML = '<div class="alert alert-danger">❌ Sesja wygasła. Zaloguj się ponownie.</div>';
+                        return toggleView(false);
+                    }
+
+                    if (response.status === 201) {
+                        successCount++;
+                        statusElement.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Wysłano ${successCount}/${totalFiles} plików...`;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
                 }
-
-                if (response.status === 201) {
-                    statusElement.innerHTML = '<div class="alert alert-success">✅ Plik wgrany pomyślnie!</div>';
-                    fileInput.value = '';
-                    descriptionInput.value = '';
-                    loadFiles();
-                } else {
-                    const errorData = await response.json();
-                    statusElement.innerHTML = `<div class="alert alert-danger">❌ Błąd: ${JSON.stringify(errorData)}</div>`;
-                }
-            } catch (error) {
-                statusElement.innerHTML = '<div class="alert alert-danger">❌ Błąd połączenia z serwerem.</div>';
             }
+
+            // Podsumowanie
+            if (failCount === 0) {
+                statusElement.innerHTML = `<div class="alert alert-success">✅ Wszystkie pliki wgrane pomyślnie! (${successCount}/${totalFiles})</div>`;
+            } else if (successCount === 0) {
+                statusElement.innerHTML = `<div class="alert alert-danger">❌ Nie udało się wgrać żadnego pliku.</div>`;
+            } else {
+                statusElement.innerHTML = `<div class="alert alert-warning">⚠️ Wgrano ${successCount} z ${totalFiles} plików. ${failCount} nie powiodło się.</div>`;
+            }
+
+            fileInput.value = '';
+            descriptionInput.value = '';
+            document.getElementById('file-count').textContent = '0';
+            loadFiles();
         }
 
         async function deleteFile(fileId) {
@@ -448,11 +472,21 @@
 
         // Inicjalizacja przy starcie
         window.addEventListener('DOMContentLoaded', () => {
+            // Inicjalizacja autoryzacji
             if (accessToken) {
                 decodeToken(accessToken);
                 toggleView(true);
             } else {
                 toggleView(false);
+            }
+
+            // Licznik wybranych plików
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const count = e.target.files.length;
+                    document.getElementById('file-count').textContent = count;
+                });
             }
         });
     </script>
