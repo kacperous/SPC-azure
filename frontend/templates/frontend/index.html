@@ -1346,8 +1346,18 @@
                     }
 
                     if (response.status === 201) {
-                        successCount++;
-                        statusElement.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Wysłano ${successCount}/${totalFiles} plików...`;
+                        const responseData = await response.json().catch(() => null);
+
+                        // Sprawdź czy to był ZIP upload (zawiera pole extracted_files)
+                        if (responseData && responseData.extracted_files) {
+                            // ZIP upload - dodaj liczbę rozpakowanych plików do successCount
+                            successCount += responseData.extracted_files.length;
+                            statusElement.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Rozpakowano ${responseData.extracted_files.length} plików z ZIP...`;
+                        } else {
+                            // Zwykły upload pojedynczego pliku
+                            successCount++;
+                            statusElement.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Wysłano ${successCount}/${totalFiles} plików...`;
+                        }
                     } else {
                         failCount++;
                     }

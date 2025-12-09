@@ -4,17 +4,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.db.models import Q
 from django.contrib.auth import get_user_model
-from django.shortcuts import redirect, get_object_or_404
-from django.http import HttpResponse
-from urllib.parse import quote    
+from django.shortcuts import get_object_or_404
+from urllib.parse import quote
 import logging
+import zipfile
+import os
+from io import BytesIO
 # Importujemy funkcję 'upload_to' z modelu, aby móc generować nowe ścieżki
-from .models import UserFile, user_directory_path 
+from .models import UserFile, user_directory_path
 from .serializers import UserFileSerializer
-from logs.models import ActivityLog 
-import mimetypes
+from logs.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
@@ -57,25 +57,120 @@ class UserFileViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Nie masz uprawnień do tego pliku.")
         return obj
 
-    # --- UPLOAD (Bez zmian) ---
-    def perform_create(self, serializer):
-        uploaded_file = self.request.data.get('file')
-        
+    # --- UPLOAD (Zmodyfikowany dla rozpakowywania ZIP) ---
+    def create(self, request, *args, **kwargs):
+        uploaded_file = request.data.get('file')
+
         if not uploaded_file:
-            return
-        
-        user_file = serializer.save(
-            owner=self.request.user,
-            original_filename=uploaded_file.name,
-            file_size=uploaded_file.size,
-            is_zip=uploaded_file.name.endswith('.zip')
-        )
-        
-        ActivityLog.objects.create(
-            user=self.request.user,
-            action=ActivityLog.ActionType.FILE_UPLOAD,
-            details=f"Wgrano plik: {user_file.original_filename}"
-        )
+            return Response({'error': 'Brak pliku do wgrania'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Sprawdź czy to plik ZIP
+        if uploaded_file.name.lower().endswith('.zip'):
+            # Rozpakuj ZIP i zapisz poszczególne pliki
+            try:
+                extracted_files = self._handle_zip_upload(uploaded_file)
+                return Response({
+                    'message': f'Pomyślnie rozpakowano {len(extracted_files)} plików z archiwum ZIP',
+                    'extracted_files': extracted_files
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.error(f"[ZIP UPLOAD] Błąd podczas przetwarzania ZIP: {str(e)}")
+                return Response({
+                    'error': f'Błąd podczas rozpakowywania ZIP: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Zwykły upload pojedynczego pliku - użyj standardowej logiki
+            return super().create(request, *args, **kwargs)
+
+    def _handle_zip_upload(self, uploaded_file):
+        """
+        Rozpakowuje plik ZIP i zapisuje poszczególne pliki do S3.
+        Zwraca listę informacji o rozpakowanych plikach.
+        """
+        extracted_files = []
+
+        try:
+            # Zapisz ZIP tymczasowo w pamięci
+            zip_buffer = BytesIO(uploaded_file.read())
+            zip_buffer.seek(0)
+
+            # Otwórz ZIP
+            with zipfile.ZipFile(zip_buffer, 'r') as zip_ref:
+                # Pobierz listę plików w ZIP-ie
+                file_list = zip_ref.namelist()
+
+                # Filtruj tylko pliki (nie katalogi)
+                files_to_extract = [f for f in file_list if not f.endswith('/')]
+
+                if not files_to_extract:
+                    raise ValueError("ZIP nie zawiera żadnych plików")
+
+                logger.info(f"[ZIP UPLOAD] Rozpakowywanie {len(files_to_extract)} plików z ZIP: {uploaded_file.name}")
+
+                # Rozpakuj i zapisz każdy plik
+                for zip_file_path in files_to_extract:
+                    try:
+                        # Wyciągnij zawartość pliku
+                        with zip_ref.open(zip_file_path) as file_in_zip:
+                            file_content = file_in_zip.read()
+                            file_size = len(file_content)
+
+                        # Przygotuj dane dla nowego pliku
+                        original_filename = os.path.basename(zip_file_path)  # Tylko nazwa pliku, bez ścieżki
+
+                        # Utwórz instancję UserFile bez zapisywania jeszcze
+                        user_file = UserFile(
+                            owner=self.request.user,
+                            original_filename=original_filename,
+                            file_size=file_size,
+                            is_zip=False
+                        )
+
+                        # Wygeneruj ścieżkę dla pliku
+                        file_path = user_directory_path(user_file, original_filename)
+
+                        # Zapisz plik do storage (S3/Azure)
+                        from django.core.files.base import ContentFile
+                        storage = user_file.file.storage
+                        storage.save(file_path, ContentFile(file_content))
+
+                        # Ustaw ścieżkę pliku i zapisz w bazie
+                        user_file.file.name = file_path
+                        user_file.save()
+
+                        logger.info(f"[ZIP UPLOAD] Zapisano plik: {original_filename}")
+
+                        # Dodaj do listy rozpakowanych plików
+                        extracted_files.append({
+                            'id': user_file.id,
+                            'original_filename': user_file.original_filename,
+                            'file_size': user_file.file_size,
+                            'uploaded_at': user_file.uploaded_at.isoformat()
+                        })
+
+                        # Loguj każdy rozpakowany plik
+                        ActivityLog.objects.create(
+                            user=self.request.user,
+                            action=ActivityLog.ActionType.FILE_UPLOAD,
+                            details=f"Rozpakowano z ZIP '{uploaded_file.name}': {original_filename}"
+                        )
+
+                    except Exception as e:
+                        logger.error(f"[ZIP UPLOAD] Błąd podczas rozpakowywania pliku {zip_file_path}: {str(e)}")
+                        continue
+
+            logger.info(f"[ZIP UPLOAD] Pomyślnie rozpakowano ZIP: {uploaded_file.name}")
+            return extracted_files
+
+        except Exception as e:
+            logger.error(f"[ZIP UPLOAD] Błąd podczas przetwarzania ZIP {uploaded_file.name}: {str(e)}")
+            # Loguj błąd
+            ActivityLog.objects.create(
+                user=self.request.user,
+                action=ActivityLog.ActionType.FILE_UPLOAD,
+                details=f"Błąd podczas rozpakowywania ZIP '{uploaded_file.name}': {str(e)}"
+            )
+            raise
 
     # --- AKCJE (Bez zmian) ---
     @action(detail=True, methods=['get'])
