@@ -39,6 +39,10 @@ INSTALLED_APPS = [
     'storages',
     'rest_framework_simplejwt', 
     'drf_spectacular',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'two_factor',
     
     'users',
     'files',
@@ -62,6 +66,9 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
 }
 
+OTP_TOTP_ISSUER = os.getenv('OTP_TOTP_ISSUER', 'SPC')
+TWO_FACTOR_PATCH_ADMIN = False
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware', 
@@ -69,6 +76,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

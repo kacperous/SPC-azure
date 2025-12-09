@@ -531,6 +531,11 @@
                         <label for="login-password" class="form-label">Hasło</label>
                         <input type="password" class="form-control" id="login-password" placeholder="Wprowadź hasło">
                     </div>
+                    <div class="mb-3 d-none" id="login-otp-group">
+                        <label for="login-otp" class="form-label">Kod 2FA (TOTP)</label>
+                        <input type="text" class="form-control" id="login-otp" placeholder="123456" inputmode="numeric" maxlength="6">
+                        <small class="text-muted">Wpisz kod z Google/Microsoft Authenticator gdy konto ma włączone 2FA.</small>
+                    </div>
                     <button class="btn btn-primary w-100" onclick="login()">Zaloguj się</button>
                     <div id="login-error" class="alert alert-danger mt-3 d-none"></div>
                 </div>
@@ -599,6 +604,56 @@
                 </div>
             </div>
 
+                <div class="card-modern">
+                    <div class="card-header-custom">
+                        <i class="bi bi-shield-check"></i>
+                        Zabezpieczenia konta (2FA TOTP)
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                        <div>
+                            <span class="badge bg-secondary" id="twofa-status-badge">Sprawdzam...</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-info btn-sm" id="twofa-start-btn" onclick="start2FASetup()">Włącz 2FA</button>
+                            <button class="btn btn-outline-danger btn-sm d-none" id="twofa-disable-btn" onclick="disable2FA()">Wyłącz 2FA</button>
+                        </div>
+                    </div>
+                    <div id="twofa-setup-section" class="d-none">
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> Zeskanuj kod QR w aplikacji (Google/Microsoft Authenticator) albo wpisz sekret ręcznie, a następnie potwierdź kodem.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6 text-center">
+                                <img id="twofa-qr" src="" alt="QR 2FA" class="img-fluid rounded" style="max-width: 260px; background: white; padding: 10px;">
+                                <div class="mt-3">
+                                    <small class="text-muted">Jeśli QR nie działa, użyj sekretu ręcznie.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label">Sekret (ręczne dodanie)</label>
+                                    <div class="input-group">
+                                        <input type="text" id="twofa-secret" class="form-control" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('twofa-secret')">Kopiuj</button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Link otpauth</label>
+                                    <textarea id="twofa-otpauth" class="form-control" rows="2" readonly></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="twofa-confirm-code" class="form-label">Kod z aplikacji (6 cyfr)</label>
+                                    <input type="text" id="twofa-confirm-code" class="form-control" placeholder="123456" inputmode="numeric" maxlength="6">
+                                </div>
+                                <button class="btn btn-primary w-100" onclick="confirm2FA()">
+                                    <i class="bi bi-check2-circle"></i> Potwierdź i włącz 2FA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="twofa-messages" class="mt-3"></div>
+                </div>
+
             <div class="card-modern">
                 <div class="card-header-custom">
                     <i class="bi bi-cloud-upload"></i>
@@ -653,6 +708,30 @@
         </div>
     </div>
 
+    <!-- Modal kodu 2FA -->
+    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="otpModalLabel"><i class="bi bi-shield-lock"></i> Potwierdź logowanie 2FA</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Podaj 6-cyfrowy kod z aplikacji TOTP (Google/Microsoft Authenticator).</p>
+                    <div class="mb-3">
+                        <label for="otp-code-input" class="form-label">Kod 2FA</label>
+                        <input type="text" class="form-control" id="otp-code-input" placeholder="123456" inputmode="numeric" maxlength="6">
+                    </div>
+                    <div id="otp-error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOTPCode()">Potwierdź</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal podglądu pliku -->
     <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -688,6 +767,8 @@
         let currentUsername = '';
         let isAdmin = false;
         let allFiles = [];
+        let twoFAEnabled = false;
+        let twoFASetupData = null;
 
         // --- NARZĘDZIA OGÓLNE ---
         function getAuthHeaders(contentType = 'application/json') {
@@ -698,6 +779,11 @@
                 headers['Content-Type'] = contentType;
             }
             return headers;
+        }
+
+        // Stub dla modala 2FA (flow przywrócone do pola w formularzu)
+        function submitOTPCode() {
+            console.warn('Modal 2FA nieużywany — wpisz kod w polu logowania.');
         }
 
         function decodeToken(token) {
@@ -721,10 +807,14 @@
                 `;
                 document.getElementById('admin-dashboard').classList.toggle('d-none', !isAdmin);
                 loadFiles();
+                fetch2FAStatus();
             } else {
                 currentUsername = '';
                 isAdmin = false;
                 document.getElementById('username-display').innerHTML = '';
+                twoFAEnabled = false;
+                twoFASetupData = null;
+                update2FAUI();
             }
         }
 
@@ -734,6 +824,11 @@
                 username: document.getElementById('login-username').value,
                 password: document.getElementById('login-password').value
             };
+            const otpInput = document.getElementById('login-otp');
+            const otpValue = otpInput ? otpInput.value.trim() : '';
+            if (otpValue) {
+                data.otp_token = otpValue;
+            }
             const errorElement = document.getElementById('login-error');
             errorElement.textContent = '';
             errorElement.classList.add('d-none');
@@ -753,10 +848,27 @@
                     localStorage.setItem('refresh_token', refreshToken);
                     decodeToken(accessToken);
                     toggleView(true);
-                } else {
-                    errorElement.textContent = 'Nieprawidłowa nazwa użytkownika lub hasło';
-                    errorElement.classList.remove('d-none');
+                    return;
                 }
+
+                const errorData = await response.json().catch(() => null);
+                let message = 'Nieprawidłowa nazwa użytkownika lub hasło';
+                if (errorData && errorData.otp_token) {
+                    const otpMsg = Array.isArray(errorData.otp_token) ? errorData.otp_token.join(' ') : errorData.otp_token;
+                    message = otpMsg || 'Wymagany kod 2FA.';
+                    const otpGroup = document.getElementById('login-otp-group');
+                    if (otpGroup) {
+                        otpGroup.classList.remove('d-none');
+                    }
+                    if (otpInput) {
+                        otpInput.focus();
+                    }
+                    errorElement.textContent = message;
+                    errorElement.classList.remove('d-none'); // pokaż czerwony komunikat
+                    return;
+                }
+                errorElement.textContent = message;
+                errorElement.classList.remove('d-none');
             } catch (error) {
                 errorElement.textContent = 'Błąd połączenia z serwerem';
                 errorElement.classList.remove('d-none');
@@ -829,6 +941,206 @@
                 console.error("Błąd odświeżania tokenu:", e);
             }
             return false;
+        }
+
+        // --- 2FA (TOTP) ---
+        function setTwoFAMessage(type, text) {
+            const el = document.getElementById('twofa-messages');
+            if (!el) return;
+            if (!text) {
+                el.innerHTML = '';
+                return;
+            }
+            const classes = {
+                success: 'alert alert-success',
+                error: 'alert alert-danger',
+                warning: 'alert alert-warning',
+                info: 'alert alert-info'
+            };
+            const cls = classes[type] || classes.info;
+            el.innerHTML = `<div class="${cls}">${text}</div>`;
+        }
+
+        function update2FAUI() {
+            const badge = document.getElementById('twofa-status-badge');
+            const startBtn = document.getElementById('twofa-start-btn');
+            const disableBtn = document.getElementById('twofa-disable-btn');
+            const setupSection = document.getElementById('twofa-setup-section');
+            if (!badge || !startBtn || !disableBtn || !setupSection) return;
+
+            if (twoFAEnabled) {
+                badge.textContent = 'Włączone';
+                badge.className = 'badge bg-success';
+                startBtn.classList.add('d-none');
+                disableBtn.classList.remove('d-none');
+                setupSection.classList.add('d-none');
+            } else {
+                badge.textContent = 'Wyłączone';
+                badge.className = 'badge bg-secondary';
+                startBtn.classList.remove('d-none');
+                disableBtn.classList.add('d-none');
+                if (!twoFASetupData) {
+                    setupSection.classList.add('d-none');
+                }
+            }
+        }
+
+        async function fetch2FAStatus() {
+            const badge = document.getElementById('twofa-status-badge');
+            if (!accessToken || !badge) return;
+            badge.textContent = 'Sprawdzam...';
+            badge.className = 'badge bg-secondary';
+            setTwoFAMessage('', '');
+
+            try {
+                const response = await fetch('/api/users/2fa/status/', {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.status === 401) {
+                    if (await refreshAccessToken()) return fetch2FAStatus();
+                    return toggleView(false);
+                }
+
+                if (!response.ok) throw new Error('status');
+
+                const data = await response.json();
+                twoFAEnabled = !!data.enabled;
+                if (twoFAEnabled) {
+                    twoFASetupData = null;
+                }
+            } catch (error) {
+                setTwoFAMessage('error', 'Nie udało się pobrać statusu 2FA.');
+            }
+            update2FAUI();
+        }
+
+        async function start2FASetup() {
+            setTwoFAMessage('', '');
+            const setupSection = document.getElementById('twofa-setup-section');
+            if (!setupSection) return;
+            try {
+                const response = await fetch('/api/users/2fa/setup/', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.status === 401) {
+                    if (await refreshAccessToken()) return start2FASetup();
+                    return toggleView(false);
+                }
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => null);
+                    const msg = err?.detail || 'Nie udało się rozpocząć konfiguracji 2FA.';
+                    setTwoFAMessage('error', msg);
+                    return;
+                }
+
+                const data = await response.json();
+                if (!data.qr_code_base64) {
+                    setTwoFAMessage('info', data.detail || '2FA jest już włączone.');
+                    twoFAEnabled = true;
+                    update2FAUI();
+                    return;
+                }
+
+                twoFASetupData = data;
+                document.getElementById('twofa-qr').src = `data:image/png;base64,${data.qr_code_base64}`;
+                document.getElementById('twofa-secret').value = data.secret;
+                document.getElementById('twofa-otpauth').value = data.otpauth_url;
+                document.getElementById('twofa-confirm-code').value = '';
+                setupSection.classList.remove('d-none');
+                twoFAEnabled = false;
+                update2FAUI();
+                setTwoFAMessage('info', 'Zeskanuj kod i potwierdź 6-cyfrowym kodem.');
+            } catch (error) {
+                setTwoFAMessage('error', 'Błąd połączenia podczas konfiguracji 2FA.');
+            }
+        }
+
+        async function confirm2FA() {
+            const codeInput = document.getElementById('twofa-confirm-code');
+            const code = (codeInput.value || '').trim();
+            if (!code) {
+                setTwoFAMessage('warning', 'Podaj kod z aplikacji (6 cyfr).');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/2fa/confirm/', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ otp_token: code })
+                });
+
+                if (response.status === 401) {
+                    if (await refreshAccessToken()) return confirm2FA();
+                    return toggleView(false);
+                }
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => null);
+                    const msg = err?.otp_token || err?.detail || 'Nie udało się potwierdzić 2FA.';
+                    setTwoFAMessage('error', Array.isArray(msg) ? msg.join(' ') : msg);
+                    return;
+                }
+
+                setTwoFAMessage('success', '2FA zostało włączone.');
+                twoFAEnabled = true;
+                twoFASetupData = null;
+                document.getElementById('twofa-setup-section').classList.add('d-none');
+                update2FAUI();
+                fetch2FAStatus();
+            } catch (error) {
+                setTwoFAMessage('error', 'Błąd połączenia podczas potwierdzania 2FA.');
+            }
+        }
+
+        async function disable2FA() {
+            if (!confirm('Na pewno wyłączyć 2FA?')) return;
+            try {
+                const response = await fetch('/api/users/2fa/disable/', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.status === 401) {
+                    if (await refreshAccessToken()) return disable2FA();
+                    return toggleView(false);
+                }
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => null);
+                    const msg = err?.detail || 'Nie udało się wyłączyć 2FA.';
+                    setTwoFAMessage('error', msg);
+                    return;
+                }
+
+                twoFAEnabled = false;
+                twoFASetupData = null;
+                document.getElementById('twofa-setup-section').classList.add('d-none');
+                update2FAUI();
+                setTwoFAMessage('success', '2FA zostało wyłączone.');
+            } catch (error) {
+                setTwoFAMessage('error', 'Błąd połączenia podczas wyłączania 2FA.');
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const value = el.value || el.textContent;
+            if (!navigator.clipboard) {
+                setTwoFAMessage('info', 'Skopiuj ręcznie: ' + value);
+                return;
+            }
+            navigator.clipboard.writeText(value).then(() => {
+                setTwoFAMessage('info', 'Skopiowano do schowka.');
+            }).catch(() => {
+                setTwoFAMessage('warning', 'Nie udało się skopiować. Skopiuj ręcznie.');
+            });
         }
 
         // --- LOGIKA PLIKÓW (CRUD) ---
