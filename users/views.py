@@ -16,61 +16,75 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from users.serializers import UserRegisterSerializer
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     otp_token = serializers.CharField(
-        write_only=True, required=False, allow_blank=True, help_text="6-cyfrowy kod TOTP"
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text="6-cyfrowy kod TOTP",
     )
-    
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
 
         # !!! TE POLA SĄ DODAWANE DO TOKENA I NAPRAWIAJĄ BŁĄD 'UNDEFINED' !!!
-        token['username'] = user.username
-        token['is_staff'] = user.is_staff
-        token['is_superuser'] = user.is_superuser
+        token["username"] = user.username
+        token["is_staff"] = user.is_staff
+        token["is_superuser"] = user.is_superuser
         # Dodajemy też ID, choć JS go na razie nie używa
-        token['user_id'] = user.id
+        token["user_id"] = user.id
 
         return token
 
     def validate(self, attrs):
         otp_token = attrs.get("otp_token")
         data = super().validate(attrs)
-        
+
         # Jeżeli użytkownik ma aktywne 2FA (TOTP), wymagamy poprawnego kodu
         devices = TOTPDevice.objects.filter(user=self.user, confirmed=True)
         if devices.exists():
             otp_raw = (otp_token or "").strip().replace(" ", "")
             if not otp_raw:
-                raise serializers.ValidationError({"otp_token": "Wymagany jest kod 2FA (TOTP)."})
+                raise serializers.ValidationError(
+                    {"otp_token": "Wymagany jest kod 2FA (TOTP)."}
+                )
             if not otp_raw.isdigit():
-                raise serializers.ValidationError({"otp_token": "Kod 2FA musi zawierać tylko cyfry."})
+                raise serializers.ValidationError(
+                    {"otp_token": "Kod 2FA musi zawierać tylko cyfry."}
+                )
 
             otp_is_valid = any(device.verify_token(otp_raw) for device in devices)
             if not otp_is_valid:
-                raise serializers.ValidationError({"otp_token": "Nieprawidłowy kod 2FA."})
+                raise serializers.ValidationError(
+                    {"otp_token": "Nieprawidłowy kod 2FA."}
+                )
 
         # Logowanie do LogBooka
         ActivityLog.objects.create(
             user=self.user,
             action=ActivityLog.ActionType.USER_LOGIN,
-            details=f"Użytkownik {self.user.username} zalogował się pomyślnie."
+            details=f"Użytkownik {self.user.username} zalogował się pomyślnie.",
         )
         return data
 
+
 # --- WIDOKI ---
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     # Używamy naszego ulepszonego serializera
     serializer_class = CustomTokenObtainPairSerializer
 
+
 class UserRegisterView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
-    permission_classes = [permissions.AllowAny] 
+    permission_classes = [permissions.AllowAny]
     # Zakładam, że UserRegisterSerializer jest w users/serializers.py
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_users(request):
     """
@@ -78,18 +92,18 @@ def list_users(request):
     Zwykli użytkownicy otrzymają pustą listę.
     """
     User = get_user_model()
-    
+
     # Tylko administratorzy mogą widzieć listę użytkowników
     if not (request.user.is_staff or request.user.is_superuser):
         return Response([], status=status.HTTP_200_OK)
-    
-    users = User.objects.all().order_by('username')
-    user_list = [{'username': user.username, 'id': user.id} for user in users]
-    
+
+    users = User.objects.all().order_by("username")
+    user_list = [{"username": user.username, "id": user.id} for user in users]
+
     return Response(user_list, status=status.HTTP_200_OK)
 
+
 class ToggleStaffStatusView(APIView):
-    
     def post(self, request, username, format=None):
         """
         Zmienia status is_staff dla danego użytkownika (nadaje/odbiera uprawnienia admina).
@@ -98,26 +112,34 @@ class ToggleStaffStatusView(APIView):
         try:
             user_to_update = User.objects.get(username=username)
         except User.DoesNotExist:
-            return Response({"error": f"Użytkownik '{username}' nie znaleziony."}, status=status.HTTP_404_NOT_FOUND)
-            
+            return Response(
+                {"error": f"Użytkownik '{username}' nie znaleziony."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         # Zmień status na przeciwny (jeśli True, to False i odwrotnie)
         user_to_update.is_staff = not user_to_update.is_staff
         # Upewnij się, że is_superuser pozostaje False, chyba że to jest superuser
         if not user_to_update.is_superuser:
             user_to_update.is_superuser = False
-            
+
         user_to_update.save()
-        
-        new_status = "Administratorem" if user_to_update.is_staff else "Zwykłym użytkownikiem"
+
+        new_status = (
+            "Administratorem" if user_to_update.is_staff else "Zwykłym użytkownikiem"
+        )
 
         # Zapisz log (jeśli chcesz mieć logi na poziomie LogBooka)
         ActivityLog.objects.create(
             user=request.user,
-            action=ActivityLog.ActionType.USER_STATUS_CHANGE, # Musisz dodać ten typ do logs/models.py!
-            details=f"Zmieniono status użytkownika {username} na: {new_status}."
+            action=ActivityLog.ActionType.USER_STATUS_CHANGE,  # Musisz dodać ten typ do logs/models.py!
+            details=f"Zmieniono status użytkownika {username} na: {new_status}.",
         )
 
-        return Response({"message": f"Status użytkownika '{username}' zmieniony na: {new_status}"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": f"Status użytkownika '{username}' zmieniony na: {new_status}"},
+            status=status.HTTP_200_OK,
+        )
 
 
 class TOTPSetupView(APIView):
@@ -145,7 +167,9 @@ class TOTPSetupView(APIView):
         )
 
         issuer = getattr(settings, "OTP_TOTP_ISSUER", "SPC")
-        secret = base64.b32encode(bytes.fromhex(device.key)).decode("utf-8").replace("=", "")
+        secret = (
+            base64.b32encode(bytes.fromhex(device.key)).decode("utf-8").replace("=", "")
+        )
         label = f"{issuer}:{user.get_username()}"
         otp_uri = (
             f"otpauth://totp/{urllib.parse.quote(label)}"
@@ -204,7 +228,9 @@ class TOTPConfirmView(APIView):
         device.confirmed = True
         device.save(update_fields=["confirmed"])
 
-        return Response({"detail": "2FA (TOTP) zostało włączone."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "2FA (TOTP) zostało włączone."}, status=status.HTTP_200_OK
+        )
 
 
 class TOTPDisableView(APIView):

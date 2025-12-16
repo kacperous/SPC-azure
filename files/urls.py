@@ -8,8 +8,8 @@ from .views import UserFileViewSet
 # GET, POST -> /api/files/
 # GET, DELETE -> /api/files/1/
 router = DefaultRouter()
-router.register(r'files', UserFileViewSet, basename='file')
+router.register(r"files", UserFileViewSet, basename="file")
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]
